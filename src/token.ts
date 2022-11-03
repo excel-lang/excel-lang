@@ -31,6 +31,24 @@ export enum TokenType {
   EOF
 }
 
+export type BinaryOperator =
+  TokenType.And |
+  TokenType.Or |
+  TokenType.Eq |
+  TokenType.Neq |
+  TokenType.Lt |
+  TokenType.Gt |
+  TokenType.Lte |
+  TokenType.Gte |
+  TokenType.Add |
+  TokenType.Sub |
+  TokenType.Mul |
+  TokenType.Div |
+  TokenType.Mod
+
+export type UnaryOperator =
+  TokenType.Not
+
 export interface SourcePosition {
   Start: number
   End: number
