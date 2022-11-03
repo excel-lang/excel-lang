@@ -1,4 +1,4 @@
-import { TokenType, Token } from "./token"
+import { SourcePosition, TokenType, Token } from "./token"
 
 function isLetter(c: string): boolean {
   return !!c.match(/[a-z]/i)
@@ -12,43 +12,38 @@ function isWhitespace(c: string): boolean {
   return !!c.match(/\s/)
 }
 
-function isIdentifierStartChar(c: string): boolean {
+function isNameStartChar(c: string): boolean {
   return isLetter(c) || c === '_'
 }
 
-function isIdentifierChar(c: string) {
-  return isIdentifierStartChar(c) || isDigit(c)
+function isNameChar(c: string) {
+  return isNameStartChar(c) || isDigit(c)
 }
 
-function getTokenTypeForIdentifier(identifier: string): TokenType {
-  switch (identifier) {
-  case "fn":
-    return TokenType.Function
-  case "model":
-    return TokenType.Model
-  case "True":
-    return TokenType.True
-  case "False":
-    return TokenType.False
-  default:
-    return TokenType.Identifier
+export class ScannerError {
+  public readonly SourcePosition: SourcePosition
+  public readonly Message: string
+
+  constructor(sourcePosition: SourcePosition, message: string) {
+    this.SourcePosition = sourcePosition
+    this.Message = message
   }
 }
 
 export class Scanner {
-  private s : number = -1
-  private i: number = -1
-  private readonly input: string
+  private _s : number = -1
+  private _i: number = -1
+  private readonly _input: string
 
-  constructor(input: string) {
-    this.input = input
+  constructor(_input: string) {
+    this._input = _input
   }
 
   public Scan(): Token {
-    if (this.i >= this.input.length) return this.Emit(TokenType.EOF)
+    if (this._i >= this._input.length) return this.Emit(TokenType.EOF)
     do {
-      this.i++
-      this.s = this.i
+      this._i++
+      this._s = this._i
       switch (this.Current) {
       case "(":
         return this.Emit(TokenType.LParen)
@@ -105,8 +100,8 @@ export class Scanner {
       case "":
         return this.Emit(TokenType.EOF)
       default:
-        if (isIdentifierStartChar(this.Current)) {
-          return this.ScanIdentifierOrKeyword()
+        if (isNameStartChar(this.Current)) {
+          return this.ScanName()
         } else if (isDigit(this.Current)) {
           return this.ScanNumber()
         } else if (isWhitespace(this.Current)) {
@@ -118,58 +113,90 @@ export class Scanner {
   }
 
   private get Current(): string {
-    return this.input[this.i] ?? ""
+    return this._input[this._i] ?? ""
   }
 
   private get Next(): string {
-    return this.input[this.i + 1] ?? ""
+    return this._input[this._i + 1] ?? ""
   }
 
   private get Literal(): string {
-    return this.input.slice(this.s, this.i + 1)
+    return this._input.slice(this._s, this._i + 1)
+  }
+
+  private get SourcePosition(): SourcePosition {
+    return {
+      Start: this._s,
+      End: this._i
+    }
   }
 
   private Emit(type: TokenType): Token {
-    const literal: string =
-      (type === TokenType.EOF)
-        ? '' : (type === TokenType.String)
-          ? this.input.slice(this.s + 1, this.i) : this.Literal
-    return new Token(type, literal)
+    let literal: string
+    if (type === TokenType.EOF) {
+      literal = ''
+    } else if (type === TokenType.String) {
+      literal = this._input.slice(this._s + 1, this._i)
+    } else {
+      literal = this.Literal
+      if (type === TokenType.Name) {
+        switch (literal) {
+        case "fn":
+          type = TokenType.Function
+          break
+        case "model":
+          type = TokenType.Model
+          break
+        case "True":
+          type = TokenType.True
+          break
+        case "False":
+          type = TokenType.False
+          break
+        }
+      }
+    }
+    return {
+      Type: type,
+      Literal: literal,
+      SourcePosition: this.SourcePosition
+    }
   }
 
   private Match(c: string): boolean {
     if (this.Next !== c) return false
-    this.i++
+    this._i++
     return true
   }
 
   private SkipComment(): void {
-    while (this.Next && this.Next !== "\n") this.i++
+    while (this.Next && this.Next !== "\n") this._i++
   }
 
   private ScanString(): Token {
     do {
       if (!this.Next)
-        throw new Error("String literal is not closed, add a single quote character to close your string.")
-      this.i++
+        throw new ScannerError(
+          this.SourcePosition,
+          "String literal is not closed, add a single quote character to close your string.")
+      this._i++
     } while (this.Current !== "'")
     return this.Emit(TokenType.String)
   }
 
-  private ScanIdentifierOrKeyword(): Token {
-    while (isIdentifierChar(this.Next)) this.i++
-    const type: TokenType = getTokenTypeForIdentifier(this.Literal)
-    return new Token(type, this.Literal)
+  private ScanName() {
+    while (isNameChar(this.Next)) this._i++
+    return this.Emit(TokenType.Name)
   }
 
   private ScanNumber(): Token {
-    while (isDigit(this.Next)) this.i++
+    while (isDigit(this.Next)) this._i++
     if (this.Next !== ".") return this.Emit(TokenType.Number)
-    do { this.i++ } while (isDigit(this.Next))
+    do { this._i++ } while (isDigit(this.Next))
     return this.Emit(TokenType.Number)
   }
 
   private SkipWhitespace(): void {
-    while (isWhitespace(this.Next)) this.i++
+    while (isWhitespace(this.Next)) this._i++
   }
 }

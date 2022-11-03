@@ -1,7 +1,7 @@
 export enum TokenType {
   Function,
   Model,
-  Identifier,
+  Name,
   LParen,
   RParen,
   LBracket,
@@ -31,12 +31,13 @@ export enum TokenType {
   EOF
 }
 
-export class Token {
-  public readonly type: TokenType
-  public readonly literal: string
+export interface SourcePosition {
+  Start: number
+  End: number
+}
 
-  constructor(type: TokenType, literal: string) {
-    this.type = type
-    this.literal = literal
-  }
+export interface Token {
+  readonly Type: TokenType
+  readonly Literal: string
+  readonly SourcePosition: SourcePosition
 }

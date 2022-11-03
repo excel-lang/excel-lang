@@ -8,10 +8,10 @@ describe("scanner", () => {
   function runScanner(scanner: Scanner, expected: Expected): void {
     let token: Token = scanner.Scan()
     let i = 0
-    while (token.type != TokenType.EOF) {
+    while (token.Type != TokenType.EOF) {
       const [expectedType, expectedLiteral] = expected[i]
-      expect(token.type).to.equal(expectedType)
-      expect(token.literal).to.equal(expectedLiteral)
+      expect(token.Type).to.equal(expectedType)
+      expect(token.Literal).to.equal(expectedLiteral)
       token = scanner.Scan()
       i++
     }
@@ -74,13 +74,13 @@ describe("scanner", () => {
     runScanner(scanner, expected)
   })
 
-  it("should scan identifiers and keywords", () => {
+  it("should scan names", () => {
     const tokens = "fn variable_name _var True False model"
     const scanner = new Scanner(tokens)
     const expected: Expected = [
       [TokenType.Function, "fn"],
-      [TokenType.Identifier, "variable_name"],
-      [TokenType.Identifier, "_var"],
+      [TokenType.Name, "variable_name"],
+      [TokenType.Name, "_var"],
       [TokenType.True, "True"],
       [TokenType.False, "False"],
       [TokenType.Model, "model"]
