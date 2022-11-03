@@ -1,0 +1,24 @@
+{
+  "name": "elang",
+  "version": "1.0.0",
+  "description": "Functional Programming Language to compose and generate Excel functions to use in dynamic models",
+  "author": "Zach Perkitny",
+  "license": "MIT",
+  "scripts": {
+    "prepublishOnly": "rm -rf ./dist && tsc",
+    "test": "ts-mocha test/**/*.test.ts"
+  },
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "devDependencies": {
+    "@tsconfig/node16": "^1.0.3",
+    "@types/chai": "^4.3.3",
+    "@types/expect": "^24.3.0",
+    "@types/mocha": "^10.0.0",
+    "chai": "^4.3.6",
+    "mocha": "^10.1.0",
+    "ts-mocha": "^10.0.0",
+    "typescript": "^4.8.4"
+  },
+  "dependencies": {}
+}
