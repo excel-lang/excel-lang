@@ -1,5 +1,5 @@
 {
-  "name": "elang",
+  "name": "excel-lang",
   "version": "1.0.0",
   "description": "Functional Programming Language to compose and generate Excel functions to use in dynamic models",
   "author": "Zach Perkitny",
