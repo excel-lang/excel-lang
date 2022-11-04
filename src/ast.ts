@@ -1,20 +1,12 @@
 import { BinaryOperator, UnaryOperator } from "./token"
 
 export interface ASTNode {
-  Accept(visitor: ASTVisitor): void
+  Accept(visitor: ASTVisitor): unknown
 }
 
-export type Expression =
-  BinaryExpression |
-  UnaryExpression |
-  CallExpression |
-  NameReference |
-  SheetReference |
-  Boolean |
-  Number |
-  String
+export interface Expression extends ASTNode {}
 
-export class BinaryExpression implements ASTNode {
+export class BinaryExpression implements Expression {
   public readonly Lhs: Expression
   public readonly Op: BinaryOperator
   public readonly Rhs: Expression
@@ -25,12 +17,12 @@ export class BinaryExpression implements ASTNode {
     this.Rhs = rhs
   }
 
-  Accept(visitor: ASTVisitor): void {
-    visitor.VisitBinaryExpression(this)
+  public Accept(visitor: ASTVisitor): unknown {
+    return visitor.VisitBinaryExpression(this)
   }
 }
 
-export class UnaryExpression implements ASTNode {
+export class UnaryExpression implements Expression {
   public readonly Op: UnaryOperator
   public readonly Expr: Expression
 
@@ -39,99 +31,135 @@ export class UnaryExpression implements ASTNode {
     this.Expr = expr
   }
 
-  Accept(visitor: ASTVisitor): void {
-    visitor.VisitUnaryExpression(this)
+  public Accept(visitor: ASTVisitor): unknown {
+    return visitor.VisitUnaryExpression(this)
   }
 }
 
 export type CallArgs = Expression[]
 
-export class CallExpression implements ASTNode {
-  public readonly Name: string
+export class CallExpression implements Expression {
+  public readonly Name: NameExpression
   public readonly Args: CallArgs
 
-  constructor(name: string, args: CallArgs) {
+  constructor(name: NameExpression, args: CallArgs) {
     this.Name = name
     this.Args = args
   }
 
-  Accept(visitor: ASTVisitor): void {
-    visitor.VisitCallExpression(this)
+  public Accept(visitor: ASTVisitor): unknown {
+    return visitor.VisitCallExpression(this)
   }
 }
 
-export class NameReference implements ASTNode {
+export class NameExpression implements Expression {
   public readonly Name: string
   
   constructor(name: string) {
     this.Name = name
   }
 
-  Accept(visitor: ASTVisitor): void {
-    visitor.VisitNameReference(this)
+  public Accept(visitor: ASTVisitor): unknown {
+    return visitor.VisitNameExpression(this)
   }
 }
 
-export class SheetReference implements ASTNode {
-  public readonly Column: string
-  public readonly ColumnEnd?: string
-  public readonly Sheet?: string
+export class RangeExpression implements Expression {
+  public readonly Start: NameExpression
+  public readonly End: NameExpression
 
-  constructor(column: string, columnEnd?: string, sheet?: string) {
-    this.Column = column
-    this.ColumnEnd = columnEnd
-    this.Sheet = sheet
+  constructor(start: NameExpression, end: NameExpression) {
+    this.Start = start
+    this.End = end
   }
 
-  Accept(visitor: ASTVisitor): void {
-    visitor.VisitSheetReference(this)
+  public Accept(visitor: ASTVisitor): unknown {
+    return visitor.VisitRangeExpression(this)
   }
 }
 
-export class BooleanLiteral implements ASTNode {
+export type SheetName = NameExpression | StringLiteral
+
+export class SheetExpression implements Expression {
+  public readonly Name: SheetName
+  public readonly Expr: Expression
+
+  constructor(name: SheetName, expr: Expression) {
+    this.Name = name
+    this.Expr = expr
+  }
+
+  public Accept(visitor: ASTVisitor): unknown {
+    return visitor.VisitSheetExpression(this)
+  }
+}
+
+export class RValue implements Expression {
+  public Accept(visitor: ASTVisitor): unknown {
+    return visitor.VisitRValue(this)
+  }
+}
+
+export class CValue implements Expression {
+  public Accept(visitor: ASTVisitor): unknown {
+    return visitor.VisitCValue(this)
+  }
+}
+
+export class OptionsValue implements Expression {
+  public readonly Key: Expression
+
+  constructor(key: Expression) {
+    this.Key = key
+  }
+
+  public Accept(visitor: ASTVisitor): unknown {
+    return visitor.VisitOptionsValue(this)
+  }
+}
+
+export class BooleanLiteral implements Expression {
   public readonly Value: boolean
 
   constructor(value: boolean) {
     this.Value = value
   }
 
-  Accept(visitor: ASTVisitor): void {
-    visitor.VisitBooleanLiteral(this)
+  public Accept(visitor: ASTVisitor): unknown {
+    return visitor.VisitBooleanLiteral(this)
   }
 }
 
-export class NumberLiteral implements ASTNode {
+export class NumberLiteral implements Expression {
   public readonly Value: number
 
   constructor(value: number) {
     this.Value = value
   }
 
-  Accept(visitor: ASTVisitor): void {
-    visitor.VisitNumberLiteral(this)
+  public Accept(visitor: ASTVisitor): unknown {
+    return visitor.VisitNumberLiteral(this)
   }
 }
 
-export class StringLiteral implements ASTNode {
+export class StringLiteral implements Expression {
   public readonly Value: string
 
   constructor(value: string) {
     this.Value = value
   }
 
-  Accept(visitor: ASTVisitor): void {
-    visitor.VisitStringLiteral(this)
+  public Accept(visitor: ASTVisitor): unknown {
+    return visitor.VisitStringLiteral(this)
   }
 }
 
-export type Statement =
-  Function |
-  Model
+export interface Statement extends ASTNode {}
 
 export type FunctionParameters = string[]
-export type FunctionBody = Expression[]
+export type FunctionBody = Expression
 
-export class Function implements ASTNode {
+export class FunctionStatement implements Statement {
   public readonly Name: string
   public readonly Parameters: FunctionParameters
   public readonly Body: FunctionBody
@@ -146,40 +174,50 @@ export class Function implements ASTNode {
     return this.Parameters.length
   }
 
-  Accept(visitor: ASTVisitor): void {
-    visitor.VisitFunction(this)
+  public Accept(visitor: ASTVisitor): unknown {
+    return visitor.VisitFunctionStatement(this)
   }
 }
 
+export type ModelOptions = [string, Expression][]
 export type ModelHeaders = [string, Expression][]
 
-export class Model implements ASTNode {
+export class ModelStatement implements Statement {
   public readonly Name: string
-  public readonly StartRow: number
-  public readonly EndRow: number
+  public readonly Options: ModelOptions
   public readonly Headers: ModelHeaders
 
-  constructor(name: string, startRow: number, endRow: number, headers: ModelHeaders) {
+  constructor(name: string, options: ModelOptions, headers: ModelHeaders) {
     this.Name = name
-    this.StartRow = startRow
-    this.EndRow = endRow
+    this.Options = options
     this.Headers = headers
   }
 
-  Accept(visitor: ASTVisitor): void {
-    visitor.VisitModel(this)
+  public Accept(visitor: ASTVisitor): unknown {
+    return visitor.VisitModelStatement(this)
+  }
+}
+
+export class NopStatement implements Statement {
+  public Accept(visitor: ASTVisitor): unknown {
+    return visitor.VisitNopStatement(this)
   }
 }
 
 export interface ASTVisitor {
-  VisitBinaryExpression(expression: BinaryExpression): void
-  VisitUnaryExpression(expression: UnaryExpression): void
-  VisitCallExpression(expression: CallExpression): void
-  VisitNameReference(reference: NameReference): void
-  VisitSheetReference(reference: SheetReference): void
-  VisitBooleanLiteral(val: BooleanLiteral): void
-  VisitNumberLiteral(val: NumberLiteral): void
-  VisitStringLiteral(val: StringLiteral): void
-  VisitFunction(func: Function): void
-  VisitModel(model: Model): void
+  VisitBinaryExpression(expression: BinaryExpression): unknown
+  VisitUnaryExpression(expression: UnaryExpression): unknown
+  VisitCallExpression(expression: CallExpression): unknown
+  VisitNameExpression(expression: NameExpression): unknown
+  VisitRangeExpression(expression: RangeExpression): unknown
+  VisitSheetExpression(expression: SheetExpression): unknown
+  VisitRValue(val: RValue): unknown
+  VisitCValue(val: CValue): unknown
+  VisitOptionsValue(val: OptionsValue): unknown
+  VisitBooleanLiteral(val: BooleanLiteral): unknown
+  VisitNumberLiteral(val: NumberLiteral): unknown
+  VisitStringLiteral(val: StringLiteral): unknown
+  VisitFunctionStatement(func: FunctionStatement): unknown
+  VisitModelStatement(model: ModelStatement): unknown
+  VisitNopStatement(nop: NopStatement): unknown
 }

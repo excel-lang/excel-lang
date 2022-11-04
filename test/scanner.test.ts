@@ -17,26 +17,6 @@ describe("scanner", () => {
     }
   }
 
-  it("should scan simple tokens", () => {
-    const tokens = "(){},:&|+*/%"
-    const scanner = new Scanner(tokens)
-    const expected: Expected = [
-      [TokenType.LParen, "("],
-      [TokenType.RParen, ")"],
-      [TokenType.LBracket, "{"],
-      [TokenType.RBracket, "}"],
-      [TokenType.Comma, ","],
-      [TokenType.Colon, ":"],
-      [TokenType.And, "&"],
-      [TokenType.Or, "|"],
-      [TokenType.Add, "+"],
-      [TokenType.Mul, "*"],
-      [TokenType.Div, "/"],
-      [TokenType.Mod, "%"]
-    ]
-    runScanner(scanner, expected)
-  })
-
   it("should scan conditional tokens", () => {
     const tokens = "!<>-!=<=>=->"
     const scanner = new Scanner(tokens)
@@ -112,7 +92,6 @@ describe("scanner", () => {
 
   it("should throw an error for unterminated strings", () => {
     const str = "'i am not terminated"
-    const scanner = new Scanner(str)
-    expect(() => scanner.Scan()).to.throw()
+    expect(() => new Scanner(str)).to.throw()
   })
 })
