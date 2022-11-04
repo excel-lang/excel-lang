@@ -92,7 +92,7 @@ The syntax to create composable Excel formulas
 
 The `fn` keyword is used to define a new function. Functions are meant to composed and are then converted to Excel Formulas. You can use existing Excel functions. They are not case sensitive. The built in Excel functions can be overshadowed, so be aware that this may create unintended behavior.
 
-You are able to define a name and a set of parameters. The body of the function can only be comprised of expressions. There are no statements.
+You are able to define a name and a set of parameters. Parameters are simply identifiers that can be used in the body of the function. Multiple parameters must be seperated by a `,`. The body of the function can only be comprised of expressions. There are no statements allowed within a function.
 
 ### Function Example
 ```
