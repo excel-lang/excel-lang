@@ -6,6 +6,8 @@ Functional Programming Language to compose and generate Excel functions to use i
 * [Expressions](#expressions)
   - [Literals](#literals)
   - [Variables](#variables)
+  - [Ranges](#ranges)
+  - [Sheets](#sheets)
   - [Built In Values](#built-in-values)
   - [Binary Operators](#binary-operators)
   - [Unary Operators](#unary-operators)
@@ -28,10 +30,21 @@ This gives you access to the Lexical Scanner, Parser and Formula and Model Gener
 
 * Booleans `True` and `False`
 * Numbers can be integers or floats, ex: `25`, `15.6`, `.5`
-* Strings are enclosed within single quotes, ex: `'this is a string'`
+* Strings are enclosed within single quotes, ex. `'this is a string'`
 
 ### Variables
-Variables are only created through function parameters. You cannot declare/define a variable within the body a of function.
+Variables are only created through function parameters. You cannot declare/define a variable within the body a of function. If a variable is referenced that is not a parameter, the name will be passed directly to an Excel formula. This allows you to reference columns, ex. `A1` or `G7`.
+
+### Ranges
+Ranges are create with the same syntax as in Excel, ex. `A1:A10`
+
+### Sheets
+You can reference values from other sheets by specifying a name or a string in the case you want to reference a sheet with whitespace. The value to get from the sheet can be any expression. This allows you to use variables or ranges.
+
+#### Examples
+`Sheet[A1:A10]`
+
+`'Sheet with whitespace'[B2]`
 
 ### Built In Values
 * `R` can be used to access the current row number during generation
@@ -101,7 +114,7 @@ There are 3 built in options:
 
 Options are declared with the following syntax `<name> -> <expression>`. Multiple options must be seperated with a `,`.
 
-Headers are defined by specifying a name and an expression (ie. a function call or a number). Headers are declared with the following syntax `<string_literal> -> <expression>`.
+Headers are defined by specifying a name and an expression (ex. a function call or a number). Headers are declared with the following syntax `<string_literal> -> <expression>`.
 
 ### Model Example
 ```
