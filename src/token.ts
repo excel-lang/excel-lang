@@ -1,8 +1,8 @@
 export enum Name {
   Function = "fn",
   Model = "model",
-  R = "R",
-  C = "C",
+  Row = "row",
+  Col = "col",
   Options = "options",
   Name = "name"
 }
@@ -28,7 +28,7 @@ export enum LogicalOperator {
 
 export enum EqualityOperator {
   Eq = "=",
-  Neq = "!="
+  Neq = "<>"
 }
 
 export enum ComparisonOperator {

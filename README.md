@@ -36,19 +36,19 @@ This gives you access to the Lexical Scanner, Parser and Formula and Model Gener
 Variables are only created through function parameters. You cannot declare/define a variable within the body a of function. If a variable is referenced that is not a parameter, the name will be passed directly to an Excel formula. This allows you to reference columns, ex. `A1` or `G7`.
 
 ### Ranges
-Ranges are create with the same syntax as in Excel, ex. `A1:A10`
+Ranges work in the same way as in Excel and are created by seperating two expressions by a colon and enclosing it in curly braces, ex. `{A1:A10}`, `{row['A']:row['A'] + 10}`
 
 ### Sheets
 You can reference values from other sheets by specifying a name or a string in the case you want to reference a sheet with whitespace. The value to get from the sheet can be any expression. This allows you to use variables or ranges.
 
 #### Examples
-`Sheet[A1:A10]`
+`Sheet[{A1:A10}]`
 
 `'Sheet with whitespace'[B2]`
 
 ### Built In Values
-* `R` can be used to access the current row number during generation
-* `C` can be used to access the current col during generation
+* `row[<expression>]` can be used to access a column for the current row
+* `col` can be used to access the current column during generation
 * `options[<expression>]` can be used to access model options
 
 ### Binary Operators
@@ -58,7 +58,7 @@ Binary operations allow you to use an operator on two operands.
 | - | - |
 | \|  | 0  |
 | &  | 1  |
-| =, != | 2 |
+| =, <> | 2 |
 | <, >, <=, >= | 3 |
 | - | 4 |
 | + | 5 |
@@ -100,7 +100,7 @@ fn my_function_name(some_value) -> (sum('Another Sheet'[A1:A10]) + sum('Some Oth
 ```
 
 ## Models
-The syntax to create Excel models programatically
+The syntax to create computed models in Excel.
 
 The `model` keyword is used to defined a new model within a sheet. Multiple models can be defined within a sheet.
 

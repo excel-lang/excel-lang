@@ -7,8 +7,8 @@ import {
   NameExpression,
   RangeExpression,
   SheetExpression,
-  RValue,
-  CValue,
+  RowValue,
+  ColValue,
   OptionsValue,
   BooleanLiteral,
   NumberLiteral,
@@ -193,10 +193,10 @@ export class Parser {
       const expr: Expression = this.ParseUnaryExpression()
       return new UnaryExpression(op, expr)
     }
-    return this.ParseHighestExpressions()
+    return this.ParseOperandExpressions()
   }
 
-  private ParseHighestExpressions() : Expression {
+  private ParseOperandExpressions() : Expression {
     if (this.Match(TokenType.Name)) {
       const name: NameExpression = new NameExpression(this._scanner.CurrentToken.Literal)
       if (this.Match(TokenType.LParen)) {
@@ -208,8 +208,6 @@ export class Parser {
           this.Expect(TokenType.RParen)
         }
         return new CallExpression(name, args)
-      } else if (this.Match(TokenType.Colon)) {
-        return new RangeExpression(name, new NameExpression(this.Expect(TokenType.Name).Literal))
       } else if (this.Match(TokenType.LBracket)) {
         const expr: Expression = this.ParseExpression()
         this.Expect(TokenType.RBracket)
@@ -226,14 +224,23 @@ export class Parser {
         return new SheetExpression(literal, expr)
       }
       return literal
+    } else if (this.Match(TokenType.LBrace)) {
+      const start: Expression = this.ParseExpression()
+      this.Expect(TokenType.Colon)
+      const end: Expression = this.ParseExpression()
+      this.Expect(TokenType.RBrace)
+      return new RangeExpression(start, end)
     } else if (this.Match(TokenType.True)) {
       return new BooleanLiteral(true)
     } else if (this.Match(TokenType.False)) {
       return new BooleanLiteral(false)
-    } else if (this.Match(TokenType.R)) {
-      return new RValue()
-    } else if (this.Match(TokenType.C)) {
-      return new CValue()
+    } else if (this.Match(TokenType.Row)) {
+      this.Expect(TokenType.LBracket)
+      const expr: Expression = this.ParseExpression()
+      this.Expect(TokenType.RBracket)
+      return new RowValue(expr)
+    } else if (this.Match(TokenType.Col)) {
+      return new ColValue()
     } else if (this.Match(TokenType.Options)) {
       this.Expect(TokenType.LBracket)
       const key: Expression = this.ParseExpression()

@@ -1,10 +1,10 @@
 import { expect } from "chai"
 import { Statement } from "../src/ast"
+import { ASTSerializer } from "../src/ast_serializer"
 import { Parser } from "../src/parser"
-import { Serializer } from "../src/serializer"
 
 describe("parser", () => {
-  const serializer = new Serializer()
+  const serializer = new ASTSerializer()
 
   function runExpressionParser(input: string, expected: string): void {
     const parser = new Parser(input)
@@ -19,8 +19,9 @@ describe("parser", () => {
   }
 
   it("should parse range expressions", () => {
-    const input = "A1:B10"
-    runExpressionParser(input, input)
+    const input = "{row['A']:row['A'] + 1}"
+    const expected = "{row['A']:(row['A']+1)}"
+    runExpressionParser(input, expected)
   })
 
   it("should parse name sheet expressions", () => {
@@ -36,15 +37,15 @@ describe("parser", () => {
   it("should parse operators with correct precedence", () => {
     const input0 = "5 + test * (A1 - 7 / 4)"
     const expected0 = "(5+(test*(A1-(7/4))))"
-    const input1 = "variable & 'Sheet'[A1] | 'Other Sheet'[B2] > R >= C & !True != 'nonsense'"
-    const expected1 = "((variable&'Sheet'[A1])|((('Other Sheet'[B2]>R)>=C)&((!True)!='nonsense')))"
+    const input1 = "variable & 'Sheet'[A1] | 'Other Sheet'[B2] > row['C'] >= col & !True <> 'nonsense'"
+    const expected1 = "((variable&'Sheet'[A1])|((('Other Sheet'[B2]>row['C'])>=col)&((!True)<>'nonsense')))"
     runExpressionParser(input0, expected0)
     runExpressionParser(input1, expected1)
   })
 
   it("should parse call expressions", () => {
-    const input = "some_function(1, 'My Sheet'[A7], True, A1:B10)"
-    const expected = "some_function(1,'My Sheet'[A7],True,A1:B10)"
+    const input = "some_function(1, 'My Sheet'[A7], True, {A1:B10})"
+    const expected = "some_function(1,'My Sheet'[A7],True,{A1:B10})"
     runExpressionParser(input, expected)
   })
 

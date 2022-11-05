@@ -18,15 +18,14 @@ describe("scanner", () => {
   }
 
   it("should scan conditional tokens", () => {
-    const tokens = "!<>-!=<=>=->"
+    const tokens = "-<><<=>>=->"
     const scanner = new Scanner(tokens)
     const expected: Expected = [
-      [TokenType.Not, "!"],
-      [TokenType.Lt, "<"],
-      [TokenType.Gt, ">"],
       [TokenType.Sub, "-"],
-      [TokenType.Neq, "!="],
+      [TokenType.Neq, "<>"],
+      [TokenType.Lt, "<"],
       [TokenType.Lte, "<="],
+      [TokenType.Gt, ">"],
       [TokenType.Gte, ">="],
       [TokenType.Arrow, "->"]
     ]
@@ -34,11 +33,11 @@ describe("scanner", () => {
   })
 
   it ("should ignore whitespace", () => {
-    const tokens = "!     != \n\r,"
+    const tokens = "!     <> \n\r,"
     const scanner = new Scanner(tokens)
     const expected: Expected = [
       [TokenType.Not, "!"],
-      [TokenType.Neq, "!="],
+      [TokenType.Neq, "<>"],
       [TokenType.Comma, ","]
     ]
     runScanner(scanner, expected)

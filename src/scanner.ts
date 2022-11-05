@@ -90,10 +90,10 @@ export class Scanner {
       case "=":
         return this.Emit(TokenType.Eq)
       case "!":
-        if (this.Match("=")) return this.Emit(TokenType.Neq)
         return this.Emit(TokenType.Not)
       case "<":
         if (this.Match("=")) return this.Emit(TokenType.Lte)
+        else if (this.Match(">")) return this.Emit(TokenType.Neq)
         return this.Emit(TokenType.Lt)
       case ">":
         if (this.Match("=")) return this.Emit(TokenType.Gte)
@@ -168,11 +168,11 @@ export class Scanner {
         case "model":
           type = TokenType.Model
           break
-        case "R":
-          type = TokenType.R
+        case "row":
+          type = TokenType.Row
           break
-        case "C":
-          type = TokenType.C
+        case "col":
+          type = TokenType.Col
           break
         case "options":
           type = TokenType.Options

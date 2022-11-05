@@ -65,10 +65,10 @@ export class NameExpression implements Expression {
 }
 
 export class RangeExpression implements Expression {
-  public readonly Start: NameExpression
-  public readonly End: NameExpression
+  public readonly Start: Expression
+  public readonly End: Expression
 
-  constructor(start: NameExpression, end: NameExpression) {
+  constructor(start: Expression, end: Expression) {
     this.Start = start
     this.End = end
   }
@@ -94,15 +94,21 @@ export class SheetExpression implements Expression {
   }
 }
 
-export class RValue implements Expression {
+export class RowValue implements Expression {
+  public readonly Key: Expression
+
+  constructor(key: Expression) {
+    this.Key = key
+  }
+
   public Accept(visitor: ASTVisitor): unknown {
-    return visitor.VisitRValue(this)
+    return visitor.VisitRowValue(this)
   }
 }
 
-export class CValue implements Expression {
+export class ColValue implements Expression {
   public Accept(visitor: ASTVisitor): unknown {
-    return visitor.VisitCValue(this)
+    return visitor.VisitColValue(this)
   }
 }
 
@@ -198,26 +204,22 @@ export class ModelStatement implements Statement {
   }
 }
 
-export class NopStatement implements Statement {
-  public Accept(visitor: ASTVisitor): unknown {
-    return visitor.VisitNopStatement(this)
-  }
-}
-
-export interface ASTVisitor {
+export interface ExpressionVisitor {
   VisitBinaryExpression(expression: BinaryExpression): unknown
   VisitUnaryExpression(expression: UnaryExpression): unknown
   VisitCallExpression(expression: CallExpression): unknown
   VisitNameExpression(expression: NameExpression): unknown
   VisitRangeExpression(expression: RangeExpression): unknown
   VisitSheetExpression(expression: SheetExpression): unknown
-  VisitRValue(val: RValue): unknown
-  VisitCValue(val: CValue): unknown
+  VisitRowValue(val: RowValue): unknown
+  VisitColValue(val: ColValue): unknown
   VisitOptionsValue(val: OptionsValue): unknown
   VisitBooleanLiteral(val: BooleanLiteral): unknown
   VisitNumberLiteral(val: NumberLiteral): unknown
   VisitStringLiteral(val: StringLiteral): unknown
+}
+
+export interface ASTVisitor extends ExpressionVisitor {
   VisitFunctionStatement(func: FunctionStatement): unknown
   VisitModelStatement(model: ModelStatement): unknown
-  VisitNopStatement(nop: NopStatement): unknown
 }
