@@ -7,13 +7,13 @@ import {
   SheetExpression,
   RowValue,
   ColValue,
+  OptionsValue,
   BooleanLiteral,
   NumberLiteral,
   StringLiteral,
   FunctionStatement,
   ModelStatement,
-  ASTVisitor,
-  OptionsValue
+  ASTVisitor
 } from "./ast"
 
 export class ASTSerializer implements ASTVisitor {

@@ -1,10 +1,10 @@
 import { BinaryOperator, UnaryOperator } from "./token"
 
-export interface ASTNode {
-  Accept(visitor: ASTVisitor): unknown
+export interface ASTNode<VisitorType> {
+  Accept(visitor: VisitorType): unknown
 }
 
-export interface Expression extends ASTNode {}
+export interface Expression extends ASTNode<ExpressionVisitor> {}
 
 export class BinaryExpression implements Expression {
   public readonly Lhs: Expression
@@ -17,7 +17,7 @@ export class BinaryExpression implements Expression {
     this.Rhs = rhs
   }
 
-  public Accept(visitor: ASTVisitor): unknown {
+  public Accept(visitor: ExpressionVisitor): unknown {
     return visitor.VisitBinaryExpression(this)
   }
 }
@@ -31,7 +31,7 @@ export class UnaryExpression implements Expression {
     this.Expr = expr
   }
 
-  public Accept(visitor: ASTVisitor): unknown {
+  public Accept(visitor: ExpressionVisitor): unknown {
     return visitor.VisitUnaryExpression(this)
   }
 }
@@ -47,7 +47,7 @@ export class CallExpression implements Expression {
     this.Args = args
   }
 
-  public Accept(visitor: ASTVisitor): unknown {
+  public Accept(visitor: ExpressionVisitor): unknown {
     return visitor.VisitCallExpression(this)
   }
 }
@@ -59,7 +59,7 @@ export class NameExpression implements Expression {
     this.Name = name
   }
 
-  public Accept(visitor: ASTVisitor): unknown {
+  public Accept(visitor: ExpressionVisitor): unknown {
     return visitor.VisitNameExpression(this)
   }
 }
@@ -73,7 +73,7 @@ export class RangeExpression implements Expression {
     this.End = end
   }
 
-  public Accept(visitor: ASTVisitor): unknown {
+  public Accept(visitor: ExpressionVisitor): unknown {
     return visitor.VisitRangeExpression(this)
   }
 }
@@ -89,7 +89,7 @@ export class SheetExpression implements Expression {
     this.Expr = expr
   }
 
-  public Accept(visitor: ASTVisitor): unknown {
+  public Accept(visitor: ExpressionVisitor): unknown {
     return visitor.VisitSheetExpression(this)
   }
 }
@@ -101,13 +101,13 @@ export class RowValue implements Expression {
     this.Key = key
   }
 
-  public Accept(visitor: ASTVisitor): unknown {
+  public Accept(visitor: ExpressionVisitor): unknown {
     return visitor.VisitRowValue(this)
   }
 }
 
 export class ColValue implements Expression {
-  public Accept(visitor: ASTVisitor): unknown {
+  public Accept(visitor: ExpressionVisitor): unknown {
     return visitor.VisitColValue(this)
   }
 }
@@ -119,7 +119,7 @@ export class OptionsValue implements Expression {
     this.Key = key
   }
 
-  public Accept(visitor: ASTVisitor): unknown {
+  public Accept(visitor: ExpressionVisitor): unknown {
     return visitor.VisitOptionsValue(this)
   }
 }
@@ -131,7 +131,7 @@ export class BooleanLiteral implements Expression {
     this.Value = value
   }
 
-  public Accept(visitor: ASTVisitor): unknown {
+  public Accept(visitor: ExpressionVisitor): unknown {
     return visitor.VisitBooleanLiteral(this)
   }
 }
@@ -143,7 +143,7 @@ export class NumberLiteral implements Expression {
     this.Value = value
   }
 
-  public Accept(visitor: ASTVisitor): unknown {
+  public Accept(visitor: ExpressionVisitor): unknown {
     return visitor.VisitNumberLiteral(this)
   }
 }
@@ -155,12 +155,12 @@ export class StringLiteral implements Expression {
     this.Value = value
   }
 
-  public Accept(visitor: ASTVisitor): unknown {
+  public Accept(visitor: ExpressionVisitor): unknown {
     return visitor.VisitStringLiteral(this)
   }
 }
 
-export interface Statement extends ASTNode {}
+export interface Statement extends ASTNode<StatementVisitor> {}
 
 export type FunctionParameters = string[]
 export type FunctionBody = Expression
@@ -180,7 +180,7 @@ export class FunctionStatement implements Statement {
     return this.Parameters.length
   }
 
-  public Accept(visitor: ASTVisitor): unknown {
+  public Accept(visitor: StatementVisitor): unknown {
     return visitor.VisitFunctionStatement(this)
   }
 }
@@ -199,7 +199,7 @@ export class ModelStatement implements Statement {
     this.Headers = headers
   }
 
-  public Accept(visitor: ASTVisitor): unknown {
+  public Accept(visitor: StatementVisitor): unknown {
     return visitor.VisitModelStatement(this)
   }
 }
@@ -219,7 +219,9 @@ export interface ExpressionVisitor {
   VisitStringLiteral(val: StringLiteral): unknown
 }
 
-export interface ASTVisitor extends ExpressionVisitor {
+export interface StatementVisitor {
   VisitFunctionStatement(func: FunctionStatement): unknown
   VisitModelStatement(model: ModelStatement): unknown
 }
+
+export interface ASTVisitor extends ExpressionVisitor, StatementVisitor {}
