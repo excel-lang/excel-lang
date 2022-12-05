@@ -20,6 +20,7 @@ import { BinaryOperator, UnaryOperator } from './token'
 import {
   Code,
   Function,
+  NamedFunction,
   Model
 } from './code'
 import { Context } from './context'
@@ -147,7 +148,7 @@ export class Compiler implements StatementVisitor {
   }
 
   public VisitFunctionStatement(func: FunctionStatement): void {
-    const value = new Function(func.Name)
+    const value = new NamedFunction(func.Name)
 
     for(const parameter of func.Parameters) {
       value.Parameters.push(parameter)
@@ -156,7 +157,7 @@ export class Compiler implements StatementVisitor {
     const compiler = new ExpressionCompiler(value.Code)
     func.Body.Accept(compiler)
 
-    this.Context.AddValue(func.Name, value)
+    this.Context.AddFunction(value)
   }
 
   public VisitModelStatement(model: ModelStatement): void {
@@ -176,6 +177,6 @@ export class Compiler implements StatementVisitor {
       value.Headers[header[0]] = func
     }
 
-    this.Context.AddValue(model.Name, model)
+    this.Context.AddModel(value)
   }
 }

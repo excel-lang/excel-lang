@@ -33,18 +33,9 @@ export interface Instruction {
   readonly Args: number[]
 }
 
-enum ValueType {
-  Boolean = 1,
-  String,
-  Number,
-  Reference,
-  Unknown
-}
-
 interface PushOptions {
   Args: number[]
   Pops: number
-  Returns: ValueType
 }
 
 export class CodeError extends BaseError {
@@ -57,226 +48,199 @@ export class CodeError extends BaseError {
 }
 
 export class Code {
-  public readonly OpCodes: Instruction[]
-  private _stack: ValueType[]
+  public readonly Instructions: Instruction[]
+  private _stack: number
 
   constructor() {
-    this.OpCodes = []
-    this._stack = []
+    this.Instructions = []
+    this._stack = 0
   }
 
   public WriteRow() {
     this.Write(OpCode.Row, {
       Args: [],
-      Pops: 0,
-      Returns: ValueType.Unknown
+      Pops: 0
     })
   }
 
   public WriteCol() {
     this.Write(OpCode.Col, {
       Args: [],
-      Pops: 0,
-      Returns: ValueType.Unknown
+      Pops: 0
     })
   }
 
   public WriteOptions() {
     this.Write(OpCode.Options, {
       Args: [],
-      Pops: 0,
-      Returns: ValueType.Unknown
+      Pops: 0
     })
   }
 
   public WriteProperty() {
     this.Write(OpCode.Property, {
       Args: [],
-      Pops: 0,
-      Returns: ValueType.Unknown
+      Pops: 0
     })
   }
 
   public WriteName(name: string) {
     this.Write(OpCode.Name, {
       Args: this.StringToArgs(name),
-      Pops: 0,
-      Returns: ValueType.Unknown
+      Pops: 0
     })
   }
 
   public WriteBoolean(val: boolean) {
     this.Write(OpCode.Boolean, {
       Args: [val ? 1 : 0],
-      Pops: 0,
-      Returns: ValueType.Boolean
+      Pops: 0
     })
   }
 
   public WriteNumber(val: number) {
     this.Write(OpCode.Number, {
       Args: [val],
-      Pops: 0,
-      Returns: ValueType.Number
+      Pops: 0
     })
   }
 
   public WriteString(val: string) {
     this.Write(OpCode.String, {
       Args: this.StringToArgs(val),
-      Pops: 0,
-      Returns: ValueType.String
+      Pops: 0
     })
   }
 
   public WriteCall(nArgs: number) {
     this.Write(OpCode.Call, {
       Args: [nArgs],
-      Pops: nArgs,
-      Returns: ValueType.Unknown
+      Pops: nArgs
     })
   }
 
   public WriteRange() {
     this.Write(OpCode.Range, {
       Args: [],
-      Pops: 2,
-      Returns: ValueType.Reference
+      Pops: 2
     })
   }
 
   public WriteSheet() {
     this.Write(OpCode.Sheet, {
       Args: [],
-      Pops: 2,
-      Returns: ValueType.Reference
+      Pops: 2
     })
   }
 
   public WriteOr() {
     this.Write(OpCode.Or, {
       Args: [],
-      Pops: 2,
-      Returns: ValueType.Unknown
+      Pops: 2
     })
   }
 
   public WriteAnd() {
     this.Write(OpCode.And, {
       Args: [],
-      Pops: 2,
-      Returns: ValueType.Unknown
+      Pops: 2
     })
   }
 
   public WriteEq() {
     this.Write(OpCode.Eq, {
       Args: [],
-      Pops: 2,
-      Returns: ValueType.Boolean
+      Pops: 2
     })
   }
 
   public WriteNeq() {
     this.Write(OpCode.Neq, {
       Args: [],
-      Pops: 2,
-      Returns: ValueType.Boolean
+      Pops: 2
     })
   }
 
   public WriteLt() {
     this.Write(OpCode.Lt, {
       Args: [],
-      Pops: 2,
-      Returns: ValueType.Boolean
+      Pops: 2
     })
   }
 
   public WriteGt() {
     this.Write(OpCode.Gt, {
       Args: [],
-      Pops: 2,
-      Returns: ValueType.Boolean
+      Pops: 2
     })
   }
 
   public WriteLte() {
     this.Write(OpCode.Lte, {
       Args: [],
-      Pops: 2,
-      Returns: ValueType.Boolean
+      Pops: 2
     })
   }
 
   public WriteGte() {
     this.Write(OpCode.Gte, {
       Args: [],
-      Pops: 2,
-      Returns: ValueType.Boolean
+      Pops: 2
     })
   }
 
   public WriteAdd() {
     this.Write(OpCode.Add, {
       Args: [],
-      Pops: 2,
-      Returns: ValueType.Unknown
+      Pops: 2
     })
   }
 
   public WriteSub() {
     this.Write(OpCode.Sub, {
       Args: [],
-      Pops: 2,
-      Returns: ValueType.Unknown
+      Pops: 2
     })
   }
 
   public WriteMul() {
     this.Write(OpCode.Mul, {
       Args: [],
-      Pops: 2,
-      Returns: ValueType.Unknown
+      Pops: 2
     })
   }
 
   public WriteDiv() {
     this.Write(OpCode.Div, {
       Args: [],
-      Pops: 2,
-      Returns: ValueType.Unknown
+      Pops: 2
     })
   }
 
   public WriteMod() {
     this.Write(OpCode.Mod, {
       Args: [],
-      Pops: 2,
-      Returns: ValueType.Unknown
+      Pops: 2
     })
   }
 
   public WriteNot() {
     this.Write(OpCode.Not, {
       Args: [],
-      Pops: 2,
-      Returns: ValueType.Boolean
+      Pops: 2
     })
   }
 
   private Write(opCode: OpCode, options: PushOptions) {
-    if (options.Pops > this._stack.length) {
+    if (options.Pops > this._stack) {
       throw new CodeError(
         opCode,
         `OpCode requires that at least ${options.Pops} values are on the stack.`)
     }
 
-    // TODO: Some operations, ie. for addition, strings uses CONCAT()
-    for (let i = 0; i < options.Pops; i++) this._stack.pop()
-    this._stack.push(options.Returns)
+    this._stack -= options.Pops
 
-    this.OpCodes.push({
+    this.Instructions.push({
       OpCode: opCode,
       Args: options.Args
     })
@@ -291,18 +255,31 @@ export class Code {
   }
 }
 
+export interface Functions {
+  [name: string]: NamedFunction
+}
+
 export class Function {
-  public readonly Name: string | null
   public readonly Parameters: string[]
   public readonly Code: Code
 
-  constructor(name: string | null=null) {
-    this.Name = name
+  constructor() {
     this.Parameters = []
     this.Code = new Code()
   }
+}
 
-  public Resolve() {}
+export class NamedFunction extends Function {
+  public readonly Name: string
+
+  constructor(name: string) {
+    super()
+    this.Name = name
+  }
+}
+
+export interface Models {
+  [name: string]: Model
 }
 
 export interface Definitions {
@@ -319,6 +296,4 @@ export class Model {
     this.Options = {}
     this.Headers = {}
   }
-
-  public Resolve() {}
 }

@@ -1,29 +1,35 @@
-interface ContextValues {
-  [name: string]: Object
-}
+import { Functions, NamedFunction, Model, Models } from "./code"
 
 export class Context {
-  private readonly _outerContext: Context | null
-  private readonly _values: ContextValues
+  private readonly _functions: Functions
+  private readonly _models: Models
 
-  constructor(outerContext: Context | null=null) {
-    this._outerContext = outerContext
-    this._values = {}
+  constructor() {
+    this._functions = {}
+    this._models = {}
   }
 
-  public AddValue(name: string, value: Object): void {
-    this._values[name] = value
+  get Models() {
+    return this._models
   }
 
-  public GetValue(name: string): Object | null {
-    if (this._values.hasOwnProperty(name)) {
-      return this._values[name]
-    }
+  get Functions() {
+    return this._functions
+  }
 
-    if (this._outerContext) {
-      return this._outerContext.GetValue(name)
-    }
+  public AddModel(model: Model): void {
+    this._models[model.Name] = model
+  }
 
-    return null
+  public AddFunction(func: NamedFunction): void {
+    this._functions[func.Name] = func
+  }
+
+  public GetFunction(name: string): NamedFunction {
+    return this._functions[name]
+  }
+
+  public IsFunction(name: string): boolean {
+    return this._functions.hasOwnProperty(name)
   }
 }
