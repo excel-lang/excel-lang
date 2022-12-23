@@ -39,14 +39,19 @@ export class UnaryExpression implements Expression {
 }
 
 export type CallArgs = Expression[]
+export interface CallKwargs {
+  [name: string]: Expression
+}
 
 export class CallExpression implements Expression {
   public readonly Name: string
   public readonly Args: CallArgs
+  public readonly Kwargs: CallKwargs
 
-  constructor(name: string, args: CallArgs) {
+  constructor(name: string, args: CallArgs, kwargs: CallKwargs) {
     this.Name = name
     this.Args = args
+    this.Kwargs = kwargs
   }
 
   public Accept<ReturnType>(visitor: ExpressionVisitor<ReturnType>): ReturnType {

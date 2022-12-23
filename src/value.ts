@@ -1,30 +1,13 @@
-export enum PrimitiveType {
+export enum Type {
   Boolean = "boolean",
   String = "string",
   Number = "number",
+  Reference = "reference",
   Null = "null"
 }
 
-export enum ReferenceType {
-  Cell = "cell",
-  Range = "range",
-  Sheet = "sheet"
-}
-
-export const Type = {
-  ...PrimitiveType,
-  ...ReferenceType
-}
-export type Type =
-  PrimitiveType |
-  ReferenceType
-
 export function isPrimitiveType(type: string) {
-  return Object.values<string>(PrimitiveType).includes(type)
-}
-
-export function isReferenceType(type: string) {
-  return Object.values<string>(ReferenceType).includes(type)
+  return type !== Type.Reference
 }
 
 export interface Value {
@@ -34,6 +17,6 @@ export interface Value {
 
 export type Values = Value[]
 
-export interface Variables {
+export interface ValueMap {
   [name: string]: Value
 }

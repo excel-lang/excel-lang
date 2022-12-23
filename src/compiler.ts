@@ -16,7 +16,7 @@ import {
 import { isBuiltIn, createBuiltinCall } from "./builtins"
 import { BaseError } from "./error"
 import { BinaryOperator, UnaryOperator } from "./token"
-import { isPrimitiveType, isReferenceType, Type, Value, Values } from "./value"
+import { isPrimitiveType, Type, Value, Values, ValueMap } from "./value"
 
 export interface Functions {
   [name: string]: FunctionStatement
@@ -49,7 +49,7 @@ export class Compiler implements ExpressionVisitor<Value>, StatementVisitor<void
   private readonly _functions: Functions
   private readonly _stack: Stack
 
-  constructor(options: Options) {
+  constructor(options: Options = {}) {
     this.Options = options
     this.Formulas = {}
     this._functions = {}
@@ -116,8 +116,8 @@ export class Compiler implements ExpressionVisitor<Value>, StatementVisitor<void
       }
     case BinaryOperator.Add:
       if (
-        (isReferenceType(left.Type) || left.Type === Type.Number) &&
-        (isReferenceType(right.Type) || right.Type === Type.Number)
+        (left.Type === Type.Reference || left.Type === Type.Number) &&
+        (right.Type === Type.Reference || right.Type === Type.Number)
       ) {
         return {
           Value: `(${left.Value} + ${right.Value})`,
@@ -130,8 +130,8 @@ export class Compiler implements ExpressionVisitor<Value>, StatementVisitor<void
       }
     case BinaryOperator.Sub:
       if (
-        (isReferenceType(left.Type) || left.Type === Type.Number) &&
-        (isReferenceType(right.Type) || right.Type === Type.Number)
+        (left.Type === Type.Reference || left.Type === Type.Number) &&
+        (right.Type === Type.Reference || right.Type === Type.Number)
       ) {
         return {
           Value: `(${left.Value} - ${right.Value})`,
@@ -145,7 +145,7 @@ export class Compiler implements ExpressionVisitor<Value>, StatementVisitor<void
     case BinaryOperator.Mul:
       if (isPrimitiveType(right.Type) && right.Type !== Type.Number)
         throw new CompilerError(`Right multiplication operand must be a number or a reference, but got ${right.Type}`)
-      if (isReferenceType(left.Type) || left.Type === Type.Number) {
+      if (left.Type === Type.Reference || left.Type === Type.Number) {
         return {
           Value: `(${left.Value} * ${right.Value})`,
           Type: Type.Number
@@ -157,8 +157,8 @@ export class Compiler implements ExpressionVisitor<Value>, StatementVisitor<void
       }
     case BinaryOperator.Div:
       if (
-        (isReferenceType(left.Type) || left.Type === Type.Number) &&
-        (isReferenceType(right.Type) || right.Type === Type.Number)
+        (left.Type === Type.Reference || left.Type === Type.Number) &&
+        (right.Type === Type.Reference || right.Type === Type.Number)
       ) {
         return {
           Value: `(${left.Value} / ${right.Value})`,
@@ -168,8 +168,8 @@ export class Compiler implements ExpressionVisitor<Value>, StatementVisitor<void
       throw new CompilerError(`Both division operands must be numbers or references, but got ${left.Type} and ${right.Type}`)
     case BinaryOperator.Mod:
       if (
-        (isReferenceType(left.Type) || left.Type === Type.Number) &&
-        (isReferenceType(right.Type) || right.Type === Type.Number)
+        (left.Type === Type.Reference || left.Type === Type.Number) &&
+        (right.Type === Type.Reference || right.Type === Type.Number)
       ) {
         return {
           Value: `MOD(${left.Value}, ${right.Value})`,
@@ -193,6 +193,10 @@ export class Compiler implements ExpressionVisitor<Value>, StatementVisitor<void
 
   public VisitCallExpression(expression: CallExpression): Value {
     const args: Values = expression.Args.map(arg => arg.Accept(this))
+    const kwargs: ValueMap = {}
+    for (const [name, arg] of Object.entries(expression.Kwargs)) {
+      kwargs[name] = arg.Accept(this)
+    }
     if (this._functions.hasOwnProperty(expression.Name)) {
       const func: FunctionStatement = this._functions[expression.Name]
       this._stack.push({ Variables: {} })
@@ -203,7 +207,7 @@ export class Compiler implements ExpressionVisitor<Value>, StatementVisitor<void
       this._stack.pop()
       return ret
     } else if (isBuiltIn(expression.Name)) {
-      return createBuiltinCall(expression.Name, args)
+      return createBuiltinCall(expression.Name, args, kwargs)
     }
     throw new CompilerError(`${expression.Name} is not a function`)
   }
@@ -214,14 +218,14 @@ export class Compiler implements ExpressionVisitor<Value>, StatementVisitor<void
     }
     return {
       Value: expression.Name,
-      Type: Type.Cell
+      Type: Type.Reference
     }
   }
 
   public VisitRangeExpression(expression: RangeExpression): Value {
     return {
       Value: `${expression.Start}:${expression.End}`,
-      Type: Type.Range
+      Type: Type.Reference
     }
   }
 

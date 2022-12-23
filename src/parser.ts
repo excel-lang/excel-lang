@@ -4,6 +4,7 @@ import {
   UnaryExpression,
   CallExpression,
   CallArgs,
+  CallKwargs,
   NameExpression,
   RangeExpression,
   OptionsValue,
@@ -188,13 +189,28 @@ export class Parser {
       const name: string = this._scanner.CurrentToken.Literal
       if (this.Match(TokenType.LParen)) {
         const args: CallArgs = []
+        const kwargs: CallKwargs = {}
+        let hasKwargs: boolean = false
         if (!this.Match(TokenType.RParen)) {
           do {
-            args.push(this.ParseExpression())
+            if (this.Match(TokenType.LBrace)) {
+              hasKwargs = true
+              break
+            } else {
+              args.push(this.ParseExpression())
+            }
           } while (this.Match(TokenType.Comma))
+          if (hasKwargs) {
+            do {
+              const name: string = this.Expect(TokenType.Name).Literal
+              this.Expect(TokenType.Eq)
+              kwargs[name] = this.ParseExpression()
+            } while (this.Match(TokenType.Comma))
+            this.Expect(TokenType.RBrace)
+          }
           this.Expect(TokenType.RParen)
         }
-        return new CallExpression(name, args)
+        return new CallExpression(name, args, kwargs)
       } else if (this.Match(TokenType.Colon)) {
         return new RangeExpression(name, this.Expect(TokenType.Name).Literal)
       }
