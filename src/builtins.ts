@@ -38,6 +38,8 @@ export function isBuiltIn(name: string): boolean {
 export function createBuiltinCall(name: string, args: Values): Value {
   name = name.toUpperCase()
   const builtIn: BuiltInFunction = builtInFunctions[name]
+  if (!builtIn)
+    throw new Error(`${name} is not a built-in function`)
   if (args.length < builtIn.RequiredParameters.length)
     throw new InvalidArgsError(`Expected ${builtIn.RequiredParameters.length} arguments, but got ${args.length}`)
   const parameters = builtIn.RequiredParameters.concat(builtIn.OptionalParameters ?? [])
