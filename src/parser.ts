@@ -21,6 +21,9 @@ import {
 import { BaseError } from "./error"
 import { Scanner } from "./scanner"
 import {
+  isBinaryOperator,
+  BinaryOperator,
+  precedenceMap,
   isUnaryOperator,
   UnaryOperator,
   isEqualityOperator,
@@ -28,7 +31,9 @@ import {
   isComparisonOperator,
   ComparisonOperator,
   TokenType,
-  Token
+  Token,
+  SourcePosition,
+  spanSourcePosition
 } from "./token"
 
 export type ParseResult = Statement | null
@@ -64,10 +69,11 @@ export class Parser {
   }
 
   public ParseExpression() : Expression {
-    return this.ParseLogicalOrExpressions()
+    return this.ParseExpressionRecursive(this.ParseUnaryExpression(), 0)
   }
 
   private ParseFunction(): FunctionStatement {
+    const position: SourcePosition = this._scanner.CurrentToken.SourcePosition
     const name: string = this.Expect(TokenType.Name).Literal
 
     const parameters: FunctionParameters = []
@@ -82,11 +88,12 @@ export class Parser {
     this.Expect(TokenType.Arrow)
     const body: FunctionBody = this.ParseExpression()
 
-    return new FunctionStatement(name, parameters, body)
+    return new FunctionStatement(name, parameters, body, this.SpanFromStart(position))
   }
 
   private ParseModel(): ModelStatement {
     const name: string = this.Expect(TokenType.Name).Literal
+    const position: SourcePosition = this._scanner.CurrentToken.SourcePosition
 
     this.Expect(TokenType.LBrace)
     const headers: ModelHeaders = []
@@ -98,94 +105,42 @@ export class Parser {
     } while (this.Match(TokenType.Comma))
     this.Expect(TokenType.RBrace)
 
-    return new ModelStatement(name, headers)
+    return new ModelStatement(name, headers, this.SpanFromStart(position))
   }
 
-  private ParseLogicalOrExpressions(): Expression {
-    let expr = this.ParseLogicalAndExpressions()
-    while (this.Match(TokenType.Or)) {
-      const rhs: Expression = this.ParseLogicalAndExpressions()
-      expr = new BinaryExpression(expr, TokenType.Or, rhs)
+  private ParseExpressionRecursive(lhs: Expression, minPrecedence: number): Expression {
+    while (this.MatchPredicate(type =>
+      isBinaryOperator(type) &&
+      precedenceMap[type as BinaryOperator] >= minPrecedence)
+    ) {
+      const start: SourcePosition = this._scanner.CurrentToken.SourcePosition
+      const op: TokenType = this._scanner.CurrentToken.Type
+      let rhs: Expression = this.ParseUnaryExpression()
+      if (this.PeekPredicate(type => 
+        isBinaryOperator(type) &&
+        precedenceMap[type as BinaryOperator] > precedenceMap[op as BinaryOperator])
+      ) {
+        rhs = this.ParseExpressionRecursive(rhs, precedenceMap[op as BinaryOperator] + 1)
+      }
+      lhs = new BinaryExpression(
+        lhs, op as BinaryOperator, rhs, spanSourcePosition(start, this._scanner.CurrentToken.SourcePosition))
     }
-    return expr
-  }
-
-  private ParseLogicalAndExpressions(): Expression {
-    let expr = this.ParseEqualityExpressions()
-    while (this.Match(TokenType.And)) {
-      const rhs: Expression = this.ParseEqualityExpressions()
-      expr = new BinaryExpression(expr, TokenType.And, rhs)
-    }
-    return expr
-  }
-
-  private ParseEqualityExpressions(): Expression {
-    let expr = this.ParseComparisonExpressions()
-    while (this.MatchPredicate(type => isEqualityOperator(type))) {
-      const op: EqualityOperator = this._scanner.CurrentToken.Type as EqualityOperator
-      const rhs: Expression = this.ParseComparisonExpressions()
-      expr = new BinaryExpression(expr, op, rhs)
-    }
-    return expr
-  }
-
-  private ParseComparisonExpressions(): Expression {
-    let expr = this.ParseSubtractionExpressions()
-    while (this.MatchPredicate(type => isComparisonOperator(type))) {
-      const op: ComparisonOperator = this._scanner.CurrentToken.Type as ComparisonOperator
-      const rhs: Expression = this.ParseSubtractionExpressions()
-      expr = new BinaryExpression(expr, op, rhs)
-    }
-    return expr
-  }
-
-  private ParseSubtractionExpressions(): Expression {
-    let expr = this.ParseAdditionExpressions()
-    while (this.Match(TokenType.Sub)) {
-      const rhs: Expression = this.ParseAdditionExpressions()
-      expr = new BinaryExpression(expr, TokenType.Sub, rhs)
-    }
-    return expr
-  }
-
-  private ParseAdditionExpressions(): Expression {
-    let expr = this.ParseDivisionExpressions()
-    while (this.Match(TokenType.Add)) {
-      const rhs: Expression = this.ParseDivisionExpressions()
-      expr = new BinaryExpression(expr, TokenType.Add, rhs)
-    }
-    return expr
-  }
-
-  private ParseDivisionExpressions() : Expression {
-    let expr = this.ParseMultiplicationExpressions()
-    while (this.Match(TokenType.Div)) {
-      const rhs: Expression = this.ParseMultiplicationExpressions()
-      expr = new BinaryExpression(expr, TokenType.Div, rhs)
-    }
-    return expr
-  }
-
-  private ParseMultiplicationExpressions(): Expression {
-    let expr = this.ParseUnaryExpression()
-    while (this.Match(TokenType.Mul)) {
-      const rhs: Expression = this.ParseUnaryExpression()
-      expr = new BinaryExpression(expr, TokenType.Mul, rhs)
-    }
-    return expr
+    return lhs
   }
 
   private ParseUnaryExpression() : Expression {
     if (this.MatchPredicate(type => isUnaryOperator(type))) {
+      const position: SourcePosition = this._scanner.CurrentToken.SourcePosition
       const op: UnaryOperator = this._scanner.CurrentToken.Type as UnaryOperator
       const expr: Expression = this.ParseUnaryExpression()
-      return new UnaryExpression(op, expr)
+      return new UnaryExpression(op, expr, this.SpanFromStart(position))
     }
     return this.ParseOperandExpressions()
   }
 
   private ParseOperandExpressions() : Expression {
     if (this.Match(TokenType.Name)) {
+      const position: SourcePosition = this._scanner.CurrentToken.SourcePosition
       const name: string = this._scanner.CurrentToken.Literal
       if (this.Match(TokenType.LParen)) {
         const args: CallArgs = []
@@ -210,30 +165,30 @@ export class Parser {
           }
           this.Expect(TokenType.RParen)
         }
-        return new CallExpression(name, args, kwargs)
+        return new CallExpression(name, args, kwargs, this.SpanFromStart(position))
       } else if (this.Match(TokenType.Colon)) {
-        return new RangeExpression(name, this.Expect(TokenType.Name).Literal)
+        return new RangeExpression(name, this.Expect(TokenType.Name).Literal, this.SpanFromStart(position))
       }
-      return new NameExpression(name)
+      return new NameExpression(name, position)
     } else if (this.Match(TokenType.Number)) {
-      return new NumberLiteral(parseFloat(this._scanner.CurrentToken.Literal))
+      return new NumberLiteral(parseFloat(this._scanner.CurrentToken.Literal), this._scanner.CurrentToken.SourcePosition)
     } else if (this.Match(TokenType.String)) {
-      return new StringLiteral(this._scanner.CurrentToken.Literal)
+      return new StringLiteral(this._scanner.CurrentToken.Literal, this._scanner.CurrentToken.SourcePosition)
     } else if (this.Match(TokenType.True)) {
-      return new BooleanLiteral(true)
+      return new BooleanLiteral(true, this._scanner.CurrentToken.SourcePosition)
     } else if (this.Match(TokenType.False)) {
-      return new BooleanLiteral(false)
+      return new BooleanLiteral(false, this._scanner.CurrentToken.SourcePosition)
     } else if (this.Match(TokenType.Options)) {
       this.Expect(TokenType.Period)
       const key: string = this.Expect(TokenType.Name).Literal
-      return new OptionsValue(key)
+      return new OptionsValue(key, this.SpanFromStart(this._scanner.CurrentToken.SourcePosition))
     } else if (this.Match(TokenType.LParen)) {
       const expr: Expression = this.ParseExpression()
       this.Expect(TokenType.RParen)
       return expr
     }
 
-    throw new ParseError(this._scanner.CurrentToken, `Unexpected Token: ${this._scanner.CurrentToken.Type}`)
+    throw new ParseError(this._scanner.NextToken, `Unexpected Token: ${this._scanner.NextToken.Type}`)
   }
 
   private Expect(type: TokenType): Token {
@@ -252,5 +207,13 @@ export class Parser {
     if (!predicate(this._scanner.NextToken.Type)) return false
     this._scanner.Scan()
     return true
+  }
+
+  private PeekPredicate(predicate: (type: TokenType) => boolean) {
+    return predicate(this._scanner.NextToken.Type)
+  }
+
+  private SpanFromStart(start: SourcePosition) {
+    return spanSourcePosition(start, this._scanner.CurrentToken.SourcePosition)
   }
 }

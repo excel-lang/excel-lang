@@ -56,6 +56,27 @@ export type BinaryOperator =
   ComparisonOperator |
   ArithmeticOperator
 
+
+export type PrecedenceMap = {
+  [op in BinaryOperator]: number
+}
+
+export const precedenceMap: PrecedenceMap = {
+  [LogicalOperator.Or]: 1,
+  [LogicalOperator.And]: 2,
+  [EqualityOperator.Eq]: 3,
+  [EqualityOperator.Neq]: 3,
+  [ComparisonOperator.Lt]: 4,
+  [ComparisonOperator.Gt]: 4,
+  [ComparisonOperator.Lte]: 4,
+  [ComparisonOperator.Gte]: 4,
+  [ArithmeticOperator.Add]: 5,
+  [ArithmeticOperator.Sub]: 5,
+  [ArithmeticOperator.Mul]: 6,
+  [ArithmeticOperator.Div]: 6,
+  [ArithmeticOperator.Mod]: 6
+}
+
 export enum UnaryOperator {
   Not = "!"
 }
@@ -91,6 +112,13 @@ export type TokenType =
 export interface SourcePosition {
   Start: number
   End: number
+}
+
+export function spanSourcePosition(sp0: SourcePosition, sp1: SourcePosition): SourcePosition {
+  return {
+    Start: sp0.Start,
+    End: sp1.End
+  }
 }
 
 export interface Token {

@@ -3,7 +3,8 @@ export enum Type {
   String = "string",
   Number = "number",
   Reference = "reference",
-  Null = "null"
+  Null = "null",
+  Any = "any"
 }
 
 export function isPrimitiveType(type: string) {

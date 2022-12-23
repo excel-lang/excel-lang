@@ -1,10 +1,7 @@
-import { BinaryOperator, UnaryOperator } from "./token"
-
-export interface ASTNode<VisitorType> {
-  Accept(visitor: VisitorType): unknown
-}
+import { BinaryOperator, UnaryOperator, SourcePosition } from "./token"
 
 export interface Expression {
+  readonly SourcePosition: SourcePosition
   Accept<ReturnType>(visitor: ExpressionVisitor<ReturnType>): ReturnType
 }
 
@@ -12,11 +9,13 @@ export class BinaryExpression implements Expression {
   public readonly Lhs: Expression
   public readonly Op: BinaryOperator
   public readonly Rhs: Expression
+  public readonly SourcePosition: SourcePosition
 
-  constructor(lhs: Expression, op: BinaryOperator, rhs: Expression) {
+  constructor(lhs: Expression, op: BinaryOperator, rhs: Expression, sourcePosition: SourcePosition) {
     this.Lhs = lhs
     this.Op = op
     this.Rhs = rhs
+    this.SourcePosition = sourcePosition
   }
 
   public Accept<ReturnType>(visitor: ExpressionVisitor<ReturnType>): ReturnType {
@@ -27,10 +26,12 @@ export class BinaryExpression implements Expression {
 export class UnaryExpression implements Expression {
   public readonly Op: UnaryOperator
   public readonly Expr: Expression
+  public readonly SourcePosition: SourcePosition
 
-  constructor(op: UnaryOperator, expr: Expression) {
+  constructor(op: UnaryOperator, expr: Expression, sourcePosition: SourcePosition) {
     this.Op = op
     this.Expr = expr
+    this.SourcePosition = sourcePosition
   }
 
   public Accept<ReturnType>(visitor: ExpressionVisitor<ReturnType>): ReturnType {
@@ -47,11 +48,13 @@ export class CallExpression implements Expression {
   public readonly Name: string
   public readonly Args: CallArgs
   public readonly Kwargs: CallKwargs
+  public readonly SourcePosition: SourcePosition
 
-  constructor(name: string, args: CallArgs, kwargs: CallKwargs) {
+  constructor(name: string, args: CallArgs, kwargs: CallKwargs, sourcePosition: SourcePosition) {
     this.Name = name
     this.Args = args
     this.Kwargs = kwargs
+    this.SourcePosition = sourcePosition
   }
 
   public Accept<ReturnType>(visitor: ExpressionVisitor<ReturnType>): ReturnType {
@@ -61,9 +64,11 @@ export class CallExpression implements Expression {
 
 export class NameExpression implements Expression {
   public readonly Name: string
+  public readonly SourcePosition: SourcePosition
   
-  constructor(name: string) {
+  constructor(name: string, sourcePosition: SourcePosition) {
     this.Name = name
+    this.SourcePosition = sourcePosition
   }
 
   public Accept<ReturnType>(visitor: ExpressionVisitor<ReturnType>): ReturnType {
@@ -74,10 +79,12 @@ export class NameExpression implements Expression {
 export class RangeExpression implements Expression {
   public readonly Start: string
   public readonly End: string
+  public readonly SourcePosition: SourcePosition
 
-  constructor(start: string, end: string) {
+  constructor(start: string, end: string, sourcePosition: SourcePosition) {
     this.Start = start
     this.End = end
+    this.SourcePosition = sourcePosition
   }
 
   public Accept<ReturnType>(visitor: ExpressionVisitor<ReturnType>): ReturnType {
@@ -87,9 +94,11 @@ export class RangeExpression implements Expression {
 
 export class OptionsValue implements Expression {
   public readonly Key: string
+  public readonly SourcePosition: SourcePosition
 
-  constructor(key: string) {
+  constructor(key: string, sourcePosition: SourcePosition) {
     this.Key = key
+    this.SourcePosition = sourcePosition
   }
 
   public Accept<ReturnType>(visitor: ExpressionVisitor<ReturnType>): ReturnType {
@@ -99,9 +108,11 @@ export class OptionsValue implements Expression {
 
 export class BooleanLiteral implements Expression {
   public readonly Value: boolean
+  public readonly SourcePosition: SourcePosition
 
-  constructor(value: boolean) {
+  constructor(value: boolean, sourcePosition: SourcePosition) {
     this.Value = value
+    this.SourcePosition = sourcePosition
   }
 
   public Accept<ReturnType>(visitor: ExpressionVisitor<ReturnType>): ReturnType {
@@ -111,9 +122,11 @@ export class BooleanLiteral implements Expression {
 
 export class NumberLiteral implements Expression {
   public readonly Value: number
+  public readonly SourcePosition: SourcePosition
 
-  constructor(value: number) {
+  constructor(value: number, sourcePosition: SourcePosition) {
     this.Value = value
+    this.SourcePosition = sourcePosition
   }
 
   public Accept<ReturnType>(visitor: ExpressionVisitor<ReturnType>): ReturnType {
@@ -123,9 +136,11 @@ export class NumberLiteral implements Expression {
 
 export class StringLiteral implements Expression {
   public readonly Value: string
+  public readonly SourcePosition: SourcePosition
 
-  constructor(value: string) {
+  constructor(value: string, sourcePosition: SourcePosition) {
     this.Value = value
+    this.SourcePosition = sourcePosition
   }
 
   public Accept<ReturnType>(visitor: ExpressionVisitor<ReturnType>): ReturnType {
@@ -134,6 +149,7 @@ export class StringLiteral implements Expression {
 }
 
 export interface Statement {
+  readonly SourcePosition: SourcePosition
   Accept<ReturnType>(visitor: StatementVisitor<ReturnType>): ReturnType
 }
 
@@ -144,11 +160,13 @@ export class FunctionStatement implements Statement {
   public readonly Name: string
   public readonly Parameters: FunctionParameters
   public readonly Body: FunctionBody
+  public readonly SourcePosition: SourcePosition
 
-  constructor(name: string, parameters: FunctionParameters, body: FunctionBody) {
+  constructor(name: string, parameters: FunctionParameters, body: FunctionBody, sourcePosition: SourcePosition) {
     this.Name = name
     this.Parameters = parameters
     this.Body = body
+    this.SourcePosition = sourcePosition
   }
 
   public get Arity(): number {
@@ -165,10 +183,12 @@ export type ModelHeaders = [string, Expression][]
 export class ModelStatement implements Statement {
   public readonly Name: string
   public readonly Headers: ModelHeaders
+  public readonly SourcePosition: SourcePosition
 
-  constructor(name: string, headers: ModelHeaders) {
+  constructor(name: string, headers: ModelHeaders, sourcePosition: SourcePosition) {
     this.Name = name
     this.Headers = headers
+    this.SourcePosition = sourcePosition
   }
 
   public Accept<ReturnType>(visitor: StatementVisitor<ReturnType>): ReturnType {

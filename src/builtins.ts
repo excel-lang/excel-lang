@@ -40,6 +40,34 @@ export const builtInFunctions: BuiltInMap = {
       ["sheet_text", Type.String]
     ]),
     ReturnType: Type.Reference
+  },
+  ASIN: {
+    RequiredParameters: [Type.Number],
+    ReturnType: Type.Number
+  },
+  ASINH: {
+    RequiredParameters: [Type.Number],
+    ReturnType: Type.Number
+  },
+  ATAN: {
+    RequiredParameters: [Type.Number],
+    ReturnType: Type.Number
+  },
+  ATAN2: {
+    RequiredParameters: [Type.Number, Type.Number],
+    ReturnType: Type.Number
+  },
+  ATANH: {
+    RequiredParameters: [Type.Number],
+    ReturnType: Type.Number
+  },
+  AVERAGE: {
+    RequiredParameters: [Type.Any],
+    ReturnType: Type.Number
+  },
+  AVERAGEIF: {
+    RequiredParameters: [Type.Any, Type.Any],
+    ReturnType: Type.Number
   }
 }
 
@@ -72,7 +100,7 @@ export function createBuiltinCall(name: string, args: Values, kwargs: ValueMap):
     throw new InvalidArgsError(`Expected at most ${builtIn.RequiredParameters.length} arguments, but got ${args.length}`)
   for (const [i, arg] of args.entries()) {
     const parameter = builtIn.RequiredParameters[i]
-    if (arg.Type !== parameter) throw new InvalidArgError(parameter, arg.Type)
+    if (arg.Type !== Type.Any && arg.Type !== parameter) throw new InvalidArgError(parameter, arg.Type)
     finalArgs.push(arg.Value)
   }
   if (builtIn.OptionalParameters) {
@@ -81,7 +109,7 @@ export function createBuiltinCall(name: string, args: Values, kwargs: ValueMap):
         finalArgs.push("")
       } else {
         const arg = kwargs[name]
-        if (arg.Type !== parameter) throw new InvalidArgError(parameter, arg.Type)
+        if (arg.Type !== Type.Any && arg.Type !== parameter) throw new InvalidArgError(parameter, arg.Type)
         finalArgs.push(arg.Value)
       }
     }
