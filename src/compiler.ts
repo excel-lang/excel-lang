@@ -16,7 +16,7 @@ import {
 import { isBuiltIn, createBuiltinCall } from "./builtins"
 import { BaseError } from "./error"
 import { BinaryOperator, UnaryOperator } from "./token"
-import { Type, Value, Values } from "./value"
+import { isPrimitiveType, isReferenceType, Type, Value, Values } from "./value"
 
 export interface Functions {
   [name: string]: FunctionStatement
@@ -34,16 +34,24 @@ export interface Options {
   [name: string]: Value
 }
 
+export interface Formulas {
+  [name: string]: {
+    [name: string]: Value
+  }
+}
+
 export class CompilerError extends BaseError {}
 
 export class Compiler implements ExpressionVisitor<Value>, StatementVisitor<void> {
   public readonly Options: Options
+  public readonly Formulas: Formulas
 
   private readonly _functions: Functions
   private readonly _stack: Stack
 
   constructor(options: Options) {
     this.Options = options
+    this.Formulas = {}
     this._functions = {}
     this._stack = []
   }
@@ -53,7 +61,13 @@ export class Compiler implements ExpressionVisitor<Value>, StatementVisitor<void
   }
 
   public VisitModelStatement(model: ModelStatement): void {
-    
+    if (!this.Formulas.hasOwnProperty(model.Name)) this.Formulas[model.Name] = {}
+
+    for (const header of model.Headers) {
+      this._stack.push({ Variables: {} })
+      this.Formulas[model.Name][header[0]] = header[1].Accept(this)
+      this._stack.pop()
+    }
   }
 
   public VisitBinaryExpression(expression: BinaryExpression): Value {
@@ -72,38 +86,41 @@ export class Compiler implements ExpressionVisitor<Value>, StatementVisitor<void
       }
     case BinaryOperator.Eq:
       return {
-        Value: `${left.Value} = ${right.Value}`,
+        Value: `(${left.Value} = ${right.Value})`,
         Type: Type.Boolean
       }
     case BinaryOperator.Neq:
       return {
-        Value: `${left.Value} <> ${right.Value}`,
+        Value: `(${left.Value} <> ${right.Value})`,
         Type: Type.Boolean
       }
     case BinaryOperator.Lt:
       return {
-        Value: `${left.Value} < ${right.Value}`,
+        Value: `(${left.Value} < ${right.Value})`,
         Type: Type.Boolean
       }
     case BinaryOperator.Gt:
       return {
-        Value: `${left.Value} > ${right.Value}`,
+        Value: `(${left.Value} > ${right.Value})`,
         Type: Type.Boolean
       }
     case BinaryOperator.Lte:
       return {
-        Value: `${left.Value} <= ${right.Value}`,
+        Value: `(${left.Value} <= ${right.Value})`,
         Type: Type.Boolean
       }
     case BinaryOperator.Gte:
       return {
-        Value: `${left.Value} >= ${right.Value}`,
+        Value: `(${left.Value} >= ${right.Value})`,
         Type: Type.Boolean
       }
     case BinaryOperator.Add:
-      if (left.Type === Type.Number && right.Type === Type.Number) {
+      if (
+        (isReferenceType(left.Type) || left.Type === Type.Number) &&
+        (isReferenceType(right.Type) || right.Type === Type.Number)
+      ) {
         return {
-          Value: `${left.Value} + ${right.Value}`,
+          Value: `(${left.Value} + ${right.Value})`,
           Type: Type.Number
         }
       }
@@ -112,9 +129,12 @@ export class Compiler implements ExpressionVisitor<Value>, StatementVisitor<void
         Type: Type.String
       }
     case BinaryOperator.Sub:
-      if (left.Type === Type.Number && right.Type === Type.Number) {
+      if (
+        (isReferenceType(left.Type) || left.Type === Type.Number) &&
+        (isReferenceType(right.Type) || right.Type === Type.Number)
+      ) {
         return {
-          Value: `${left.Value} - ${right.Value}`,
+          Value: `(${left.Value} - ${right.Value})`,
           Type: Type.Number
         }
       }
@@ -123,11 +143,11 @@ export class Compiler implements ExpressionVisitor<Value>, StatementVisitor<void
         Type: Type.String
       }
     case BinaryOperator.Mul:
-      if (right.Type !== Type.Number)
-        throw new CompilerError(`Right multiplication operand must be a number, but got ${right.Type}`)
-      if (left.Type === Type.Number) {
+      if (isPrimitiveType(right.Type) && right.Type !== Type.Number)
+        throw new CompilerError(`Right multiplication operand must be a number or a reference, but got ${right.Type}`)
+      if (isReferenceType(left.Type) || left.Type === Type.Number) {
         return {
-          Value: `${left.Value} * ${right.Value}`,
+          Value: `(${left.Value} * ${right.Value})`,
           Type: Type.Number
         }
       }
@@ -136,21 +156,27 @@ export class Compiler implements ExpressionVisitor<Value>, StatementVisitor<void
         Type: Type.String
       }
     case BinaryOperator.Div:
-      if (left.Type === Type.Number && right.Type === Type.Number) {
+      if (
+        (isReferenceType(left.Type) || left.Type === Type.Number) &&
+        (isReferenceType(right.Type) || right.Type === Type.Number)
+      ) {
         return {
-          Value: `${left.Value} / ${right.Value}`,
+          Value: `(${left.Value} / ${right.Value})`,
           Type: Type.Number
         }
       }
-      throw new CompilerError(`Both division operands must be numbers, but got ${left.Type} and ${right.Type}`)
+      throw new CompilerError(`Both division operands must be numbers or references, but got ${left.Type} and ${right.Type}`)
     case BinaryOperator.Mod:
-      if (left.Type === Type.Number && right.Type === Type.Number) {
+      if (
+        (isReferenceType(left.Type) || left.Type === Type.Number) &&
+        (isReferenceType(right.Type) || right.Type === Type.Number)
+      ) {
         return {
-          Value: `${left.Value} % ${right.Value}`,
+          Value: `MOD(${left.Value}, ${right.Value})`,
           Type: Type.Number
         }
       }
-      throw new CompilerError(`Both modulus operands must be numbers, but got ${left.Type} and ${right.Type}`)
+      throw new CompilerError(`Both modulus operands must be numbers or references, but got ${left.Type} and ${right.Type}`)
     }
   }
 
@@ -168,7 +194,14 @@ export class Compiler implements ExpressionVisitor<Value>, StatementVisitor<void
   public VisitCallExpression(expression: CallExpression): Value {
     const args: Values = expression.Args.map(arg => arg.Accept(this))
     if (this._functions.hasOwnProperty(expression.Name)) {
-
+      const func: FunctionStatement = this._functions[expression.Name]
+      this._stack.push({ Variables: {} })
+      for (const [i, parameter] of func.Parameters.entries()) {
+        this.CurrentFrame.Variables[parameter] = args[i]
+      }
+      const ret: Value = func.Body.Accept(this)
+      this._stack.pop()
+      return ret
     } else if (isBuiltIn(expression.Name)) {
       return createBuiltinCall(expression.Name, args)
     }

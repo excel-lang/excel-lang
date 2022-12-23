@@ -30,6 +30,8 @@ import {
   Token
 } from "./token"
 
+export type ParseResult = Statement | null
+
 export class ParseError extends BaseError {
   public readonly Token: Token
 
@@ -46,7 +48,7 @@ export class Parser {
     this._scanner = new Scanner(input)
   }
 
-  public Parse(): Statement | null {
+  public Parse(): ParseResult {
     const token: Token = this._scanner.Scan()
     switch (token.Type) {
     case TokenType.Function:
