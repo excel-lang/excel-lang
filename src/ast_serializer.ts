@@ -4,19 +4,17 @@ import {
   CallExpression,
   NameExpression,
   RangeExpression,
-  SheetExpression,
-  RowValue,
-  ColValue,
   OptionsValue,
   BooleanLiteral,
   NumberLiteral,
   StringLiteral,
   FunctionStatement,
   ModelStatement,
-  ASTVisitor
+  ExpressionVisitor,
+  StatementVisitor
 } from "./ast"
 
-export class ASTSerializer implements ASTVisitor {
+export class ASTSerializer implements ExpressionVisitor<string>, StatementVisitor<string> {
   public VisitBinaryExpression(expression: BinaryExpression): string {
     return `(${expression.Lhs.Accept(this)}${expression.Op}${expression.Rhs.Accept(this)})`
   }
@@ -27,7 +25,7 @@ export class ASTSerializer implements ASTVisitor {
 
   public VisitCallExpression(expression: CallExpression): string {
     const args = expression.Args.map(arg => arg.Accept(this))
-    return `${expression.Name.Accept(this)}(${args.join(",")})`
+    return `${expression.Name}(${args.join(",")})`
   }
 
   public VisitNameExpression(expression: NameExpression): string {
@@ -35,23 +33,11 @@ export class ASTSerializer implements ASTVisitor {
   }
 
   public VisitRangeExpression(expression: RangeExpression): string {
-    return `{${expression.Start.Accept(this)}:${expression.End.Accept(this)}}`
+    return `${expression.Start}:${expression.End}`
   }
 
-  public VisitSheetExpression(expression: SheetExpression): string {
-    return `${expression.Name.Accept(this)}[${expression.Expr.Accept(this)}]`
-  }
-
-  public VisitRowValue(val: RowValue): string {
-    return `row[${val.Key.Accept(this)}]`
-  }
-
-  public VisitColValue(val: ColValue): string {
-    return "col"
-  }
-
-  public VisitOptionsValue(val: OptionsValue): unknown {
-    return `options[${val.Key.Accept(this)}]`
+  public VisitOptionsValue(val: OptionsValue): string {
+    return `options.${val.Key}`
   }
 
   public VisitBooleanLiteral(val: BooleanLiteral): string {
@@ -71,8 +57,7 @@ export class ASTSerializer implements ASTVisitor {
   }
 
   public VisitModelStatement(model: ModelStatement): string {
-    const options = model.Options.map(([name, expr]) => `${name}->${expr.Accept(this)}`).join(",")
     const headers = model.Headers.map(([name, expr]) => `'${name}'->${expr.Accept(this)}`).join(",")
-    return `model(${model.Name})(${options})(${headers})`
+    return `model(${model.Name})(${headers})`
   }
 }

@@ -1,8 +1,6 @@
 export enum Name {
   Function = "fn",
   Model = "model",
-  Row = "row",
-  Col = "col",
   Options = "options",
   Name = "name"
 }

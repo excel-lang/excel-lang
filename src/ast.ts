@@ -4,7 +4,9 @@ export interface ASTNode<VisitorType> {
   Accept(visitor: VisitorType): unknown
 }
 
-export interface Expression extends ASTNode<ExpressionVisitor> {}
+export interface Expression {
+  Accept<ReturnType>(visitor: ExpressionVisitor<ReturnType>): ReturnType
+}
 
 export class BinaryExpression implements Expression {
   public readonly Lhs: Expression
@@ -17,7 +19,7 @@ export class BinaryExpression implements Expression {
     this.Rhs = rhs
   }
 
-  public Accept(visitor: ExpressionVisitor): unknown {
+  public Accept<ReturnType>(visitor: ExpressionVisitor<ReturnType>): ReturnType {
     return visitor.VisitBinaryExpression(this)
   }
 }
@@ -31,7 +33,7 @@ export class UnaryExpression implements Expression {
     this.Expr = expr
   }
 
-  public Accept(visitor: ExpressionVisitor): unknown {
+  public Accept<ReturnType>(visitor: ExpressionVisitor<ReturnType>): ReturnType {
     return visitor.VisitUnaryExpression(this)
   }
 }
@@ -39,15 +41,15 @@ export class UnaryExpression implements Expression {
 export type CallArgs = Expression[]
 
 export class CallExpression implements Expression {
-  public readonly Name: NameExpression
+  public readonly Name: string
   public readonly Args: CallArgs
 
-  constructor(name: NameExpression, args: CallArgs) {
+  constructor(name: string, args: CallArgs) {
     this.Name = name
     this.Args = args
   }
 
-  public Accept(visitor: ExpressionVisitor): unknown {
+  public Accept<ReturnType>(visitor: ExpressionVisitor<ReturnType>): ReturnType {
     return visitor.VisitCallExpression(this)
   }
 }
@@ -59,67 +61,33 @@ export class NameExpression implements Expression {
     this.Name = name
   }
 
-  public Accept(visitor: ExpressionVisitor): unknown {
+  public Accept<ReturnType>(visitor: ExpressionVisitor<ReturnType>): ReturnType {
     return visitor.VisitNameExpression(this)
   }
 }
 
 export class RangeExpression implements Expression {
-  public readonly Start: Expression
-  public readonly End: Expression
+  public readonly Start: string
+  public readonly End: string
 
-  constructor(start: Expression, end: Expression) {
+  constructor(start: string, end: string) {
     this.Start = start
     this.End = end
   }
 
-  public Accept(visitor: ExpressionVisitor): unknown {
+  public Accept<ReturnType>(visitor: ExpressionVisitor<ReturnType>): ReturnType {
     return visitor.VisitRangeExpression(this)
   }
 }
 
-export type SheetName = NameExpression | StringLiteral
-
-export class SheetExpression implements Expression {
-  public readonly Name: SheetName
-  public readonly Expr: Expression
-
-  constructor(name: SheetName, expr: Expression) {
-    this.Name = name
-    this.Expr = expr
-  }
-
-  public Accept(visitor: ExpressionVisitor): unknown {
-    return visitor.VisitSheetExpression(this)
-  }
-}
-
-export class RowValue implements Expression {
-  public readonly Key: Expression
-
-  constructor(key: Expression) {
-    this.Key = key
-  }
-
-  public Accept(visitor: ExpressionVisitor): unknown {
-    return visitor.VisitRowValue(this)
-  }
-}
-
-export class ColValue implements Expression {
-  public Accept(visitor: ExpressionVisitor): unknown {
-    return visitor.VisitColValue(this)
-  }
-}
-
 export class OptionsValue implements Expression {
-  public readonly Key: Expression
+  public readonly Key: string
 
-  constructor(key: Expression) {
+  constructor(key: string) {
     this.Key = key
   }
 
-  public Accept(visitor: ExpressionVisitor): unknown {
+  public Accept<ReturnType>(visitor: ExpressionVisitor<ReturnType>): ReturnType {
     return visitor.VisitOptionsValue(this)
   }
 }
@@ -131,7 +99,7 @@ export class BooleanLiteral implements Expression {
     this.Value = value
   }
 
-  public Accept(visitor: ExpressionVisitor): unknown {
+  public Accept<ReturnType>(visitor: ExpressionVisitor<ReturnType>): ReturnType {
     return visitor.VisitBooleanLiteral(this)
   }
 }
@@ -143,7 +111,7 @@ export class NumberLiteral implements Expression {
     this.Value = value
   }
 
-  public Accept(visitor: ExpressionVisitor): unknown {
+  public Accept<ReturnType>(visitor: ExpressionVisitor<ReturnType>): ReturnType {
     return visitor.VisitNumberLiteral(this)
   }
 }
@@ -155,12 +123,14 @@ export class StringLiteral implements Expression {
     this.Value = value
   }
 
-  public Accept(visitor: ExpressionVisitor): unknown {
+  public Accept<ReturnType>(visitor: ExpressionVisitor<ReturnType>): ReturnType {
     return visitor.VisitStringLiteral(this)
   }
 }
 
-export interface Statement extends ASTNode<StatementVisitor> {}
+export interface Statement {
+  Accept<ReturnType>(visitor: StatementVisitor<ReturnType>): ReturnType
+}
 
 export type FunctionParameters = string[]
 export type FunctionBody = Expression
@@ -176,52 +146,44 @@ export class FunctionStatement implements Statement {
     this.Body = body
   }
 
-  get Arity(): number {
+  public get Arity(): number {
     return this.Parameters.length
   }
 
-  public Accept(visitor: StatementVisitor): unknown {
+  public Accept<ReturnType>(visitor: StatementVisitor<ReturnType>): ReturnType {
     return visitor.VisitFunctionStatement(this)
   }
 }
 
-export type ModelOptions = [string, Expression][]
 export type ModelHeaders = [string, Expression][]
 
 export class ModelStatement implements Statement {
   public readonly Name: string
-  public readonly Options: ModelOptions
   public readonly Headers: ModelHeaders
 
-  constructor(name: string, options: ModelOptions, headers: ModelHeaders) {
+  constructor(name: string, headers: ModelHeaders) {
     this.Name = name
-    this.Options = options
     this.Headers = headers
   }
 
-  public Accept(visitor: StatementVisitor): unknown {
+  public Accept<ReturnType>(visitor: StatementVisitor<ReturnType>): ReturnType {
     return visitor.VisitModelStatement(this)
   }
 }
 
-export interface ExpressionVisitor {
-  VisitBinaryExpression(expression: BinaryExpression): unknown
-  VisitUnaryExpression(expression: UnaryExpression): unknown
-  VisitCallExpression(expression: CallExpression): unknown
-  VisitNameExpression(expression: NameExpression): unknown
-  VisitRangeExpression(expression: RangeExpression): unknown
-  VisitSheetExpression(expression: SheetExpression): unknown
-  VisitRowValue(val: RowValue): unknown
-  VisitColValue(val: ColValue): unknown
-  VisitOptionsValue(val: OptionsValue): unknown
-  VisitBooleanLiteral(val: BooleanLiteral): unknown
-  VisitNumberLiteral(val: NumberLiteral): unknown
-  VisitStringLiteral(val: StringLiteral): unknown
+export interface ExpressionVisitor<ReturnType> {
+  VisitBinaryExpression(expression: BinaryExpression): ReturnType
+  VisitUnaryExpression(expression: UnaryExpression): ReturnType
+  VisitCallExpression(expression: CallExpression): ReturnType
+  VisitNameExpression(expression: NameExpression): ReturnType
+  VisitRangeExpression(expression: RangeExpression): ReturnType
+  VisitOptionsValue(val: OptionsValue): ReturnType
+  VisitBooleanLiteral(val: BooleanLiteral): ReturnType
+  VisitNumberLiteral(val: NumberLiteral): ReturnType
+  VisitStringLiteral(val: StringLiteral): ReturnType
 }
 
-export interface StatementVisitor {
-  VisitFunctionStatement(func: FunctionStatement): unknown
-  VisitModelStatement(model: ModelStatement): unknown
+export interface StatementVisitor<ReturnType> {
+  VisitFunctionStatement(func: FunctionStatement): ReturnType
+  VisitModelStatement(model: ModelStatement): ReturnType
 }
-
-export interface ASTVisitor extends ExpressionVisitor, StatementVisitor {}

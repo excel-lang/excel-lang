@@ -6,9 +6,6 @@ import {
   CallArgs,
   NameExpression,
   RangeExpression,
-  SheetExpression,
-  RowValue,
-  ColValue,
   OptionsValue,
   BooleanLiteral,
   NumberLiteral,
@@ -18,7 +15,6 @@ import {
   FunctionParameters,
   FunctionBody,
   ModelStatement,
-  ModelOptions,
   ModelHeaders
 } from "./ast"
 import { BaseError } from "./error"
@@ -89,17 +85,6 @@ export class Parser {
   private ParseModel(): ModelStatement {
     const name: string = this.Expect(TokenType.Name).Literal
 
-    const options: ModelOptions = []
-    if (this.Match(TokenType.LParen)) {
-      do {
-        const name: string = this.Expect(TokenType.Name).Literal
-        this.Expect(TokenType.Arrow)
-        const expr: Expression = this.ParseExpression()
-        options.push([name, expr])
-      } while (this.Match(TokenType.Comma))
-      this.Expect(TokenType.RParen)
-    }
-
     this.Expect(TokenType.LBrace)
     const headers: ModelHeaders = []
     do {
@@ -110,7 +95,7 @@ export class Parser {
     } while (this.Match(TokenType.Comma))
     this.Expect(TokenType.RBrace)
 
-    return new ModelStatement(name, options, headers)
+    return new ModelStatement(name, headers)
   }
 
   private ParseLogicalOrExpressions(): Expression {
@@ -198,7 +183,7 @@ export class Parser {
 
   private ParseOperandExpressions() : Expression {
     if (this.Match(TokenType.Name)) {
-      const name: NameExpression = new NameExpression(this._scanner.CurrentToken.Literal)
+      const name: string = this._scanner.CurrentToken.Literal
       if (this.Match(TokenType.LParen)) {
         const args: CallArgs = []
         if (!this.Match(TokenType.RParen)) {
@@ -208,43 +193,21 @@ export class Parser {
           this.Expect(TokenType.RParen)
         }
         return new CallExpression(name, args)
-      } else if (this.Match(TokenType.LBracket)) {
-        const expr: Expression = this.ParseExpression()
-        this.Expect(TokenType.RBracket)
-        return new SheetExpression(name, expr)
+      } else if (this.Match(TokenType.Colon)) {
+        return new RangeExpression(name, this.Expect(TokenType.Name).Literal)
       }
-      return name
+      return new NameExpression(name)
     } else if (this.Match(TokenType.Number)) {
       return new NumberLiteral(parseFloat(this._scanner.CurrentToken.Literal))
     } else if (this.Match(TokenType.String)) {
-      const literal: StringLiteral = new StringLiteral(this._scanner.CurrentToken.Literal)
-      if (this.Match(TokenType.LBracket)) {
-        const expr: Expression = this.ParseExpression()
-        this.Expect(TokenType.RBracket)
-        return new SheetExpression(literal, expr)
-      }
-      return literal
-    } else if (this.Match(TokenType.LBrace)) {
-      const start: Expression = this.ParseExpression()
-      this.Expect(TokenType.Colon)
-      const end: Expression = this.ParseExpression()
-      this.Expect(TokenType.RBrace)
-      return new RangeExpression(start, end)
+      return new StringLiteral(this._scanner.CurrentToken.Literal)
     } else if (this.Match(TokenType.True)) {
       return new BooleanLiteral(true)
     } else if (this.Match(TokenType.False)) {
       return new BooleanLiteral(false)
-    } else if (this.Match(TokenType.Row)) {
-      this.Expect(TokenType.LBracket)
-      const expr: Expression = this.ParseExpression()
-      this.Expect(TokenType.RBracket)
-      return new RowValue(expr)
-    } else if (this.Match(TokenType.Col)) {
-      return new ColValue()
     } else if (this.Match(TokenType.Options)) {
-      this.Expect(TokenType.LBracket)
-      const key: Expression = this.ParseExpression()
-      this.Expect(TokenType.RBracket)
+      this.Expect(TokenType.Period)
+      const key: string = this.Expect(TokenType.Name).Literal
       return new OptionsValue(key)
     } else if (this.Match(TokenType.LParen)) {
       const expr: Expression = this.ParseExpression()

@@ -1,10 +1,10 @@
 import { BaseError } from "./error"
-import { Value, ValueType } from "./value"
+import { Type, Value, Values } from "./value"
 
 export interface BuiltInFunction {
-  RequiredParameters: ValueType[],
-  OptionalParameters?: ValueType[],
-  ReturnType: ValueType
+  RequiredParameters: Type[],
+  OptionalParameters?: Type[],
+  ReturnType: Type
 }
 
 export interface BuiltInMap {
@@ -12,27 +12,32 @@ export interface BuiltInMap {
 }
 
 export const builtInFunctions: BuiltInMap = {
-  abs: {
-    RequiredParameters: [ValueType.Number],
-    ReturnType: ValueType.Number
+  ABS: {
+    RequiredParameters: [Type.Number],
+    ReturnType: Type.Number
   }
 }
 
 export class InvalidArgsError extends BaseError {}
 
 export class InvalidArgError extends BaseError {
-  public readonly Expected: ValueType
-  public readonly Actual: ValueType
+  public readonly Expected: Type
+  public readonly Actual: Type
 
-  constructor(expected: ValueType, actual: ValueType) {
+  constructor(expected: Type, actual: Type) {
     super(`Expected argument to be ${expected}, instead got ${actual}`)
     this.Expected = expected
     this.Actual = actual
   }
 }
 
-export function validateArgsForBuiltIn(name: string, ...args: Value[]): void {
-  const builtIn: BuiltInFunction = builtInFunctions[name.toLowerCase()]
+export function isBuiltIn(name: string): boolean {
+  return builtInFunctions.hasOwnProperty(name.toUpperCase())
+}
+
+export function createBuiltinCall(name: string, args: Values): Value {
+  name = name.toUpperCase()
+  const builtIn: BuiltInFunction = builtInFunctions[name]
   if (args.length < builtIn.RequiredParameters.length)
     throw new InvalidArgsError(`Expected ${builtIn.RequiredParameters.length} arguments, but got ${args.length}`)
   const parameters = builtIn.RequiredParameters.concat(builtIn.OptionalParameters ?? [])
@@ -42,12 +47,8 @@ export function validateArgsForBuiltIn(name: string, ...args: Value[]): void {
     const parameter = parameters[i]
     if (arg.Type !== parameter) throw new InvalidArgError(parameter, arg.Type)
   }
-}
-
-export function getBuiltInReturnType(name: string): ValueType {
-  return builtInFunctions[name.toLowerCase()].ReturnType
-}
-
-export function isBuiltIn(name: string): boolean {
-  return builtInFunctions.hasOwnProperty(name.toLowerCase())
+  return {
+    Value: `${name.toUpperCase()}(${args.map(arg => arg.Value).join(",")})`,
+    Type: builtIn.ReturnType
+  }
 }

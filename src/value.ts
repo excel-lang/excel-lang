@@ -1,17 +1,31 @@
-export enum ValueType {
+export enum PrimitiveType {
   Boolean = "boolean",
   String = "string",
   Number = "number",
-  Reference = "reference",
-  Object = "object",
-  Date = "date",
-  Null = "null",
-  Unknown = "unknown"
+  Null = "null"
+}
+
+export enum ReferenceType {
+  Cell = "cell",
+  Range = "range",
+  Sheet = "sheet"
+}
+
+export const Type = {
+  ...PrimitiveType,
+  ...ReferenceType
+}
+export type Type =
+  PrimitiveType |
+  ReferenceType
+
+export function isPrimitiveType(type: string) {
+  return Object.values<string>(PrimitiveType).includes(type)
 }
 
 export interface Value {
   Value: any,
-  Type: ValueType
+  Type: Type
 }
 
 export type Values = Value[]

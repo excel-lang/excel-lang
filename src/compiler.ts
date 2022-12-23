@@ -4,9 +4,6 @@ import {
   CallExpression,
   NameExpression,
   RangeExpression,
-  SheetExpression,
-  RowValue,
-  ColValue,
   OptionsValue,
   BooleanLiteral,
   NumberLiteral,
@@ -16,167 +13,211 @@ import {
   ExpressionVisitor,
   StatementVisitor
 } from "./ast"
-import { BinaryOperator, UnaryOperator } from './token'
-import {
-  Code,
-  Function,
-  NamedFunction,
-  Model
-} from './code'
-import { Context } from './context'
+import { isBuiltIn, createBuiltinCall } from "./builtins"
+import { BaseError } from "./error"
+import { BinaryOperator, UnaryOperator } from "./token"
+import { Type, Value, Values } from "./value"
 
-export class ExpressionCompiler implements ExpressionVisitor {
-  public readonly Code: Code
+export interface Functions {
+  [name: string]: FunctionStatement
+}
 
-  constructor(code?: Code) {
-    this.Code = code ?? new Code()
-  }
-
-  public VisitBinaryExpression(expression: BinaryExpression): void {
-    expression.Rhs.Accept(this)
-    expression.Lhs.Accept(this)
-    switch (expression.Op) {
-    case BinaryOperator.Or:
-      this.Code.WriteOr()
-      break
-    case BinaryOperator.And:
-      this.Code.WriteAnd()
-      break
-    case BinaryOperator.Eq:
-      this.Code.WriteEq()
-      break
-    case BinaryOperator.Neq:
-      this.Code.WriteNeq()
-      break
-    case BinaryOperator.Lt:
-      this.Code.WriteLt()
-      break
-    case BinaryOperator.Gt:
-      this.Code.WriteGt()
-      break
-    case BinaryOperator.Lte:
-      this.Code.WriteLte()
-      break
-    case BinaryOperator.Gte:
-      this.Code.WriteGte()
-      break
-    case BinaryOperator.Add:
-      this.Code.WriteAdd()
-      break
-    case BinaryOperator.Sub:
-      this.Code.WriteSub()
-      break
-    case BinaryOperator.Mul:
-      this.Code.WriteMul()
-      break
-    case BinaryOperator.Div:
-      this.Code.WriteDiv()
-      break
-    case BinaryOperator.Mod:
-      this.Code.WriteMod()
-      break
-    }
-  }
-
-  public VisitUnaryExpression(expression: UnaryExpression): void {
-    expression.Expr.Accept(this)
-    switch (expression.Op) {
-    case UnaryOperator.Not:
-      this.Code.WriteNot()
-      break
-    }
-  }
-
-  public VisitCallExpression(expression: CallExpression): void {
-    for (let i = expression.Args.length - 1; i >= 0; i--) {
-      expression.Args[i].Accept(this)
-    }
-    expression.Name.Accept(this)
-    this.Code.WriteCall(expression.Args.length)
-  }
-
-  public VisitNameExpression(expression: NameExpression): void {
-    this.Code.WriteName(expression.Name)
-  }
-
-  public VisitRangeExpression(expression: RangeExpression): void {
-    expression.End.Accept(this)
-    expression.Start.Accept(this)
-    this.Code.WriteRange()
-  }
-
-  public VisitSheetExpression(expression: SheetExpression): void {
-    expression.Expr.Accept(this)
-    expression.Name.Accept(this)
-    this.Code.WriteSheet()
-  }
-
-  public VisitRowValue(val: RowValue): void {
-    this.Code.WriteRow()
-    val.Key.Accept(this)
-    this.Code.WriteProperty()
-  }
-
-  public VisitColValue(val: ColValue): void {
-    this.Code.WriteCol()
-  }
-
-  public VisitOptionsValue(val: OptionsValue): void {
-    this.Code.WriteOptions()
-    val.Key.Accept(this)
-    this.Code.WriteProperty()
-  }
-
-  public VisitBooleanLiteral(val: BooleanLiteral): void {
-    this.Code.WriteBoolean(val.Value)
-  }
-
-  public VisitNumberLiteral(val: NumberLiteral): void {
-    this.Code.WriteNumber(val.Value)
-  }
-
-  public VisitStringLiteral(val: StringLiteral): void {
-    this.Code.WriteString(val.Value)
+export interface Frame {
+  Variables: {
+    [name: string]: Value
   }
 }
 
-export class Compiler implements StatementVisitor {
-  public readonly Context: Context
+export type Stack = Frame[]
 
-  constructor() {
-    this.Context = new Context()
+export interface Options {
+  [name: string]: Value
+}
+
+export class CompilerError extends BaseError {}
+
+export class Compiler implements ExpressionVisitor<Value>, StatementVisitor<void> {
+  public readonly Options: Options
+
+  private readonly _functions: Functions
+  private readonly _stack: Stack
+
+  constructor(options: Options) {
+    this.Options = options
+    this._functions = {}
+    this._stack = []
   }
 
   public VisitFunctionStatement(func: FunctionStatement): void {
-    const value = new NamedFunction(func.Name)
-
-    for(const parameter of func.Parameters) {
-      value.Parameters.push(parameter)
-    }
-
-    const compiler = new ExpressionCompiler(value.Code)
-    func.Body.Accept(compiler)
-
-    this.Context.AddFunction(value)
+    this._functions[func.Name] = func
   }
 
   public VisitModelStatement(model: ModelStatement): void {
-    const value = new Model(model.Name)
+    
+  }
 
-    for (const option of model.Options) {
-      const func = new Function()
-      const compiler = new ExpressionCompiler(func.Code)
-      option[1].Accept(compiler)
-      value.Options[option[0]] = func
+  public VisitBinaryExpression(expression: BinaryExpression): Value {
+    const left: Value = expression.Lhs.Accept(this)
+    const right: Value = expression.Rhs.Accept(this)
+    switch (expression.Op) {
+    case BinaryOperator.Or:
+      return {
+        Value: `OR(${left.Value}, ${right.Value})`,
+        Type: Type.Boolean
+      }
+    case BinaryOperator.And:
+      return {
+        Value: `AND(${left.Value}, ${right.Value})`,
+        Type: Type.Boolean
+      }
+    case BinaryOperator.Eq:
+      return {
+        Value: `${left.Value} = ${right.Value}`,
+        Type: Type.Boolean
+      }
+    case BinaryOperator.Neq:
+      return {
+        Value: `${left.Value} <> ${right.Value}`,
+        Type: Type.Boolean
+      }
+    case BinaryOperator.Lt:
+      return {
+        Value: `${left.Value} < ${right.Value}`,
+        Type: Type.Boolean
+      }
+    case BinaryOperator.Gt:
+      return {
+        Value: `${left.Value} > ${right.Value}`,
+        Type: Type.Boolean
+      }
+    case BinaryOperator.Lte:
+      return {
+        Value: `${left.Value} <= ${right.Value}`,
+        Type: Type.Boolean
+      }
+    case BinaryOperator.Gte:
+      return {
+        Value: `${left.Value} >= ${right.Value}`,
+        Type: Type.Boolean
+      }
+    case BinaryOperator.Add:
+      if (left.Type === Type.Number && right.Type === Type.Number) {
+        return {
+          Value: `${left.Value} + ${right.Value}`,
+          Type: Type.Number
+        }
+      }
+      return {
+        Value: `CONCAT(${left.Value}, ${right.Value})`,
+        Type: Type.String
+      }
+    case BinaryOperator.Sub:
+      if (left.Type === Type.Number && right.Type === Type.Number) {
+        return {
+          Value: `${left.Value} - ${right.Value}`,
+          Type: Type.Number
+        }
+      }
+      return {
+        Value: `SUBSTITUTE(${left.Value}, ${right.Value}, "")`,
+        Type: Type.String
+      }
+    case BinaryOperator.Mul:
+      if (right.Type !== Type.Number)
+        throw new CompilerError(`Right multiplication operand must be a number, but got ${right.Type}`)
+      if (left.Type === Type.Number) {
+        return {
+          Value: `${left.Value} * ${right.Value}`,
+          Type: Type.Number
+        }
+      }
+      return {
+        Value: `REPT(${left.Value}, ${right.Value})`,
+        Type: Type.String
+      }
+    case BinaryOperator.Div:
+      if (left.Type === Type.Number && right.Type === Type.Number) {
+        return {
+          Value: `${left.Value} / ${right.Value}`,
+          Type: Type.Number
+        }
+      }
+      throw new CompilerError(`Both division operands must be numbers, but got ${left.Type} and ${right.Type}`)
+    case BinaryOperator.Mod:
+      if (left.Type === Type.Number && right.Type === Type.Number) {
+        return {
+          Value: `${left.Value} % ${right.Value}`,
+          Type: Type.Number
+        }
+      }
+      throw new CompilerError(`Both modulus operands must be numbers, but got ${left.Type} and ${right.Type}`)
     }
+  }
 
-    for (const header of model.Headers) {
-      const func = new Function()
-      const compiler = new ExpressionCompiler(func.Code)
-      header[1].Accept(compiler)
-      value.Headers[header[0]] = func
+  public VisitUnaryExpression(expression: UnaryExpression): Value {
+    const expr: Value = expression.Expr.Accept(this)
+    switch (expression.Op) {
+    case UnaryOperator.Not:
+      return {
+        Value: `NOT(${expr.Value})`,
+        Type: Type.Boolean
+      }
     }
+  }
 
-    this.Context.AddModel(value)
+  public VisitCallExpression(expression: CallExpression): Value {
+    const args: Values = expression.Args.map(arg => arg.Accept(this))
+    if (this._functions.hasOwnProperty(expression.Name)) {
+
+    } else if (isBuiltIn(expression.Name)) {
+      return createBuiltinCall(expression.Name, args)
+    }
+    throw new CompilerError(`${expression.Name} is not a function`)
+  }
+
+  public VisitNameExpression(expression: NameExpression): Value {
+    if (this.CurrentFrame.Variables.hasOwnProperty(expression.Name)) {
+      return this.CurrentFrame.Variables[expression.Name]
+    }
+    return {
+      Value: expression.Name,
+      Type: Type.Cell
+    }
+  }
+
+  public VisitRangeExpression(expression: RangeExpression): Value {
+    return {
+      Value: `${expression.Start}:${expression.End}`,
+      Type: Type.Range
+    }
+  }
+
+  public VisitOptionsValue(val: OptionsValue): Value {
+    return this.Options[val.Key]
+  }
+
+  public VisitBooleanLiteral(val: BooleanLiteral): Value {
+    return {
+      Value: (val.Value) ? "TRUE" : "FALSE",
+      Type: Type.Boolean
+    }
+  }
+
+  public VisitNumberLiteral(val: NumberLiteral): Value {
+    return {
+      Value: val.Value,
+      Type: Type.Number
+    }
+  }
+
+  public VisitStringLiteral(val: StringLiteral): Value {
+    return {
+      Value: `"${val.Value}"`,
+      Type: Type.String
+    }
+  }
+
+  private get CurrentFrame() {
+    return this._stack[this._stack.length - 1]
   }
 }

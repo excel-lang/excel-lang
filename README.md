@@ -47,9 +47,7 @@ You can reference values from other sheets by specifying a name or a string in t
 `'Sheet with whitespace'[B2]`
 
 ### Built In Values
-* `row[<expression>]` can be used to access a column for the current row
-* `col` can be used to access the current column during generation
-* `options[<expression>]` can be used to access model options
+* `options.<name>` can be used to access model options
 
 ### Binary Operators
 Binary operations allow you to use an operator on two operands.
@@ -118,7 +116,7 @@ Headers are defined by specifying a name and an expression (ex. a function call 
 
 ### Model Example
 ```
-model MyModel(
+model(
   end_row -> 25,
   some_custom_option -> compute_my_option()
 ) {

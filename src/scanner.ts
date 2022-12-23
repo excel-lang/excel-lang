@@ -168,12 +168,6 @@ export class Scanner {
         case "model":
           type = TokenType.Model
           break
-        case "row":
-          type = TokenType.Row
-          break
-        case "col":
-          type = TokenType.Col
-          break
         case "options":
           type = TokenType.Options
           break
